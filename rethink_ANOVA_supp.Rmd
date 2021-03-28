@@ -1,0 +1,135 @@
+---
+title             : "Proposal -- Roles of Target Sizes in Composite Effects"
+shorttitle         : "Target sizes in Composite Effect"
+
+author: 
+  - name: "Haiyang Jin"
+    affiliation: "1"
+    address: "New York University Abu Dhabi, Saadiyat Isalnd, Abu Dhabi, United Arab Emirates"
+    email: "haiyang.jin@nyu.edu"
+    corresponding: yes
+  - name: "Luzhu Ji"
+    affiliation : "2"
+    email: "haiyang.jin@nyu.edu"
+  - name: "William G. Hayward"
+    affiliation : "3"
+    email: "whayward@hku.hk"
+    
+affiliation:
+  - id            : "1"
+    institution   : "New York University Abu Dhabi"
+  - id            : "2"
+    institution   : "Zhejiang University of Technology"
+  - id            : "3"
+    institution   : "University of Hong Kong"
+  
+authornote        : |
+  This is the supplementary materials for the rethinking ANOVA paper.
+bibliography      : ["r-references.bib"]
+
+figsintext        : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : no
+mask              : no
+draft             : no
+
+documentclass     : "apa6"
+classoption       : "man"
+numbersections    : yes
+link-citations    : yes
+
+output:
+    # papaja::apa6_word:
+    #     toc: yes
+    # papaja::apa6_pdf:
+    #     toc: true
+    #     toc_depth: 3
+    #     highlight: default
+    #     number_sections: true
+    #     latex_engine: xelatex
+    html_document:
+        toc: true
+        toc_float: true
+        number_sections: true
+        fig_width: 6
+        fig_height: 6
+        fig_caption: true
+        theme: cosmo # sandstone
+        highlight: kate
+        code_folding: hide
+        
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+
+header-includes   :
+- \usepackage{booktabs}
+# - \usepackage{graphicx,pdflscape}
+# - \usepackage{geometry}
+# - \usepackage{float}
+# - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
+---
+
+```{r global_options, echo = FALSE, include = FALSE}
+options(width = 3000)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE,
+                      cache = FALSE, tidy = FALSE, size = "small")
+```
+
+# Preparations
+```{r setup and load the related libraries, include=FALSE}
+## set chunk options
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(include = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+# options(width = 1800)
+# knitr::opts_chunk$set(fig.width=7, fig.asp =0.618) 
+# knitr::opts_chunk$set(comment = "#") # (NA, to remove all hashes)
+
+## load libraries
+library(tidyverse)
+library(readxl)
+library(lme4)
+library(lmerTest)
+library(brms)
+library(tidybayes)
+library(ggridges)
+library(ggpubr)
+library(here)
+library(extraDistr) 
+library(papaja)
+
+theme_set(theme_apa())
+# set global chunk options, put figures into folder
+options(warn=-1, replace.assign=TRUE)
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.align = "center",
+	fig.path = "figures/figure-",
+	fig.show = "hold",
+	message = FALSE,
+	dev = "postscript"
+)
+options(replace.assign=TRUE,width=75)
+opts_chunk$set(dev='postscript')
+opts_chunk$set(echo = TRUE)
+
+n_cores <- parallel::detectCores()
+set.seed(2021)
+```
+
+# Example 1: simulation
+Training example?
+
+
+# Example 2: composite face task
+One of the popular paradigms measuring holistic face processing is the composite face task. 
+
+the composite effect
+
+
+# Session information {.unlisted .unnumbered}
+```{r}
+sessionInfo()
+```
+
