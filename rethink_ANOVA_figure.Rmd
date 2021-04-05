@@ -102,6 +102,7 @@ knitr::opts_chunk$set(
 )
 
 devtools::source_url("https://github.com/HaiyangJin/Website-Shared-Code/blob/master/simulate_data_lmm.R?raw=TRUE")
+source(here("R", "funcs.R"))
 
 ```
 
@@ -112,15 +113,15 @@ devtools::source_url("https://github.com/HaiyangJin/Website-Shared-Code/blob/mas
 
 params_ss <- list(
   # set the parameters for experiment design
-  IV1_levels = c("upright", "inverted"),  # (has to be two levels)
-  IV2_levels = c("intact", "scrambled"),  # (has to be two levels)
+  IV1_levels = c("aligned", "misaligned"),  # (has to be two levels)
+  IV2_levels = c("congruent", "incongruent"),  # (has to be two levels)
   num_Subj = 30,
   num_Stim = 30,
   
   # set the mu for every bin (every condition)
   IV1.1_IV2.1 = 500,
   IV1.2_IV2.1 = 540,
-  IV1.1_IV2.2 = 530,
+  IV1.1_IV2.2 = 540,
   IV1.2_IV2.2 = 525,
   
   # set the variances for lmm (std)
@@ -162,8 +163,8 @@ Significant interaction with non-significant simple effect analysis results:
 ```{r}
 params_sn <- list(
   # set the parameters for experiment design
-  IV1_levels = c("upright", "inverted"),  # (has to be two levels)
-  IV2_levels = c("intact", "scrambled"),  # (has to be two levels)
+  IV1_levels = c("aligned", "misaligned"),  # (has to be two levels)
+  IV2_levels = c("congruent", "incongruent"),  # (has to be two levels)
   num_Subj = 30,
   num_Stim = 30,
 
@@ -211,8 +212,8 @@ Non-significant interaction with significant simple effect analysis results:
 ```{r}
 params_ns <- list(
   # set the parameters for experiment design
-  IV1_levels = c("upright", "inverted"),  # (has to be two levels)
-  IV2_levels = c("intact", "scrambled"),  # (has to be two levels)
+  IV1_levels = c("aligned", "misaligned"),  # (has to be two levels)
+  IV2_levels = c("congruent", "incongruent"),  # (has to be two levels)
   num_Subj = 30,
   num_Stim = 30,
 
@@ -260,8 +261,8 @@ Non-significant interaction with non-significant simple effect analysis results:
 ```{r}
 params_nn <- list(
   # set the parameters for experiment design
-  IV1_levels = c("upright", "inverted"),  # (has to be two levels)
-  IV2_levels = c("intact", "scrambled"),  # (has to be two levels)
+  IV1_levels = c("aligned", "misaligned"),  # (has to be two levels)
+  IV2_levels = c("congruent", "incongruent"),  # (has to be two levels)
   num_Subj = 30,
   num_Stim = 30,
 
@@ -376,11 +377,11 @@ rbind(mutate(as_tibble(emm_simu_ss),
             color="black", size = 3, show.legend = F, parse=T) +
   geom_text(aes(label=ptext, x=x, y=y), data=df_simp,
             color="black", size = 3, show.legend = F, parse=T) +
-  labs(x="Orientation", y="Response times (ms)", color="Format", linetype="Format") +
+  labs(x="Alignment", y="Response times (ms)", color="Congruency", linetype="Congruency") +
   theme(legend.position=c(.5, .5)) +
   NULL
 
-# ggsave(file="inter_simple_sig.png", width = 8, height = 6)
+# ggsave(file="inter_simple_sig.png", width = 7.2, height = 5.4)
 ```
 
 ```{r fig.asp=.7, fig.width=3}
@@ -411,14 +412,14 @@ rbind(mutate(as_tibble(emm_simu_ss),
             color="black", size = 3, show.legend = F, parse=T) +
   geom_text(aes(label=ptext, x=x, y=y), data=df_simp,
             color="black", size = 3, show.legend = F, parse=T) +
-  labs(x="Orientation", y="Response times (ms)", color="Format", linetype="Format") +
+  labs(x="Alignment", y="Response times (ms)", color="Congruency", linetype="Congruency") +
   ylim(c(425, 650)) +
   theme_apa_nostrip() +
   # theme(legend.position="bottom") +
   theme(legend.position=c(.5,.55), legend.direction="horizontal") +
   NULL
 
-# ggsave(file="inter_simple_sig.png", width = 8, height = 6)
+# ggsave(file="inter_simple_sig.png", width = 7.2, height = 5.4)
 ```
 
 
