@@ -61,6 +61,7 @@ library(emmeans)
 library(lme4)
 library(papaja)
 
+options(emmeans=list(msg.interaction=FALSE))
 theme_set(theme_apa())
 
 # set global chunk options, put figures into folder
@@ -77,6 +78,8 @@ knitr::opts_chunk$set(
   width = 1800, 
   message = FALSE
 )
+
+source(here::here("R", "funcs.R"))
 
 n_cores <- parallel::detectCores()
 set.seed(2021)
@@ -96,14 +99,13 @@ For all these effects, the convention alpha level of 5% would be used at the sin
 
 ## Simulating data
 
-Let's simulate a dataset for above design with 30 participants for each group:
+Let's simulate a data set for above design with 30 participants for each group:
 
 ```{r message=FALSE, warning=FALSE}
-set.seed(12)
 Groups <- c("control", "protocol1", "protocol2") # Between-subject
 Test <- c("pre_test", "post_test") # Within-subject
 
-N <- 30 # number of participant in each group
+N_1 <- 30 # number of participant in each group
 
 mean_pre <- 3 # mean of pre-test performance
 delta <- c(0.5, 0.7, 1.3) + mean_pre # mean of post-test performance
@@ -114,14 +116,14 @@ sd <- 0.5   # the same standard deviation/variances were used
 C <- matrix(rho, nrow = 2, ncol = 2)
 diag(C) <- 1
 
-simu_control <- mvtnorm::rmvnorm(N, c(mean_pre, delta[1]), sigma = C*sd^2)
-simu_protocal1 <- mvtnorm::rmvnorm(N, c(mean_pre, delta[2]), sigma = C*sd^2)
-simu_protocal2 <- mvtnorm::rmvnorm(N, c(mean_pre, delta[3]), sigma = C*sd^2)
+simu_control <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[1]), sigma = C*sd^2)
+simu_protocal1 <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[2]), sigma = C*sd^2)
+simu_protocal2 <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[3]), sigma = C*sd^2)
 
 df_simu_train <- rbind(simu_control, simu_protocal1, simu_protocal2) %>% 
   as_tibble() %>% 
-  transmute(Subj = 1:(N*3),
-            Group = rep(Groups, each = N),
+  transmute(Subj = 1:(N_1*3),
+            Group = rep(Groups, each = N_1),
             pre = V1,
             post = V2) %>% 
   pivot_longer(c(pre, post), names_to = "Test", values_to = "d")
@@ -306,117 +308,86 @@ summary(contrast(emm_lmm, method="pairwise", by="Alignment"), side=">")
 summary(contrast(emm_lmm, interaction="pairwise"), side=">") 
 ```
 
-# Appendix 3: simulation for Hypothesis-based Type I Error Rate 
+# Appendix 3: simulation for calculating Hypothesis-based Type I Error Rate 
 
-Here we simulate data sets with null effects and then calculate the Single Test Type I Error Rate (STER) and HER.  
-```{r}
-
-# function for simulating data
-simu_null <- function(iter=100, N=30, rho=.5, sd=1, n_core=2,
-                      file_cache=NULL){
-  # iter: iteration number for each sample size
-  # N: sample size;
-  # rho: the correlations among conditions
-  # sd: standard deviations for each condition
-  # n_core: number of cores to run the simulation
-  # file: file name of the cache file. If NULL, no file will be cached.
-  
-  # source the function for single iteration
-  simu_null_single <- function(N_s=N, rho_s=rho, sd_s=sd){
-    library(tidyverse)
-    library(emmeans)
-    
-    mean <- rep(3, 4)
-    C <- matrix(rho_s, nrow = 4, ncol = 4)
-    diag(C) <- 1
-    
-    simu_null3 <- mvtnorm::rmvnorm(N_s, mean, sigma = C*sd_s^2) %>% 
-      as_tibble(.name_repair = NULL) %>% 
-      transmute(Subj = 1:n(),
-                congruent_aligned = V1,  incongruent_aligned = V2,
-                congruent_misaligned = V3, incongruent_misaligned = V4) %>% 
-      pivot_longer(contains("_"), names_to = c("Congruency", "Alignment"), 
-                   values_to = "d", names_sep = "_")
-    
-    aov_tmp <- afex::aov_4(d ~ Congruency * Alignment + (Congruency * Alignment | Subj),
-                           data = simu_null3) 
-    
-    # simple effect 
-    tmp_simple <- contrast(emmeans(aov_tmp, ~Congruency|Alignment), "pairwise") %>% 
-      as_tibble() %>% 
-      filter(Alignment == "aligned")
-    
-    tmp_inter <- contrast(emmeans(aov_tmp, ~Congruency+Alignment),
-                          interaction="pairwise") %>% 
-      as_tibble()
-    
-    p_simple <- tmp_simple$p.value
-    p_inter <- tmp_inter$p.value
-    
-    rawp <- tibble(N = N_s,
-                   p_simple = p_simple,
-                   p_inter = p_inter,
-                   rho = rho_s,
-                   sd = sd_s)
-    
-    return(rawp)
-  }
-  
-  if (!is.null(file_cache) && file.exists(as.character(file_cache))){
-    df_simu <- read_rds(file_cache)
-  } else {
-    # set parallel processing
-    Ns <- rep(N, times=iter)
-    ls_tibble <- pbapply::pblapply(Ns, simu_null_single, cl = n_core)
-    df_simu <- reduce(ls_tibble, rbind) %>% 
-      mutate(iter=1:n())
-    
-    if (!is.null(file_cache)){
-      write_rds(df_simu, file=file_cache)
-    }
-  }
- 
-  return(df_simu)
-}
-
-simu_alpha <- function(df_simu, alpha=.05, disp=TRUE){
-  # function to calculate the Type I error rate. 
-  # df_simu: dataframe obtained from simu_null
-  # alpha: alpha level used to calculate the Type I error rate.
-  # disp: if true, the output will be a wide format. If false, it will be long.
-  
-  df_sig <- df_simu %>% 
-    mutate(sig_simple = p_simple <= alpha,
-           sig_inter = p_inter <= alpha,
-           sig_both = sig_simple * sig_inter) %>% 
-    select(N, starts_with("sig_")) %>% 
-    pivot_longer(starts_with("sig_"), names_to = "effects", values_to = "isSig") %>% 
-    group_by(N, effects) %>% 
-    summarize(N_iter = n(),
-              N_sig = sum(isSig),
-              Type_I = mean(isSig),
-              .groups="keep")
-  
-  if (disp){
-    df_sig <- df_sig %>% 
-      select(-c(N_sig)) %>% 
-      pivot_wider(c(N, N_iter), names_from = "effects", values_from = "Type_I")
-  }
-  
-  return(df_sig)
-}
-
-```
-
-RM-ANOVA and ANOVA are the same?
+For each iteration, null effects are used to simulate data for a 2 (Congruency: *congruent* vs. *incongruent*) $\times$ 2 (Alignment: *aligned* vs. *misaligned*) within-subjects design, where the population means for all four individual conditions are the same. Then the p-value of the comparison between *aligned congruent* and *aligned incongruent* conditions and the p-value for the interaction are calculated and recorded. This process is repeated 5000 times for each of the ten sample sizes (varied from 10 to 1000). After simulating the data, different $\alpha$ levels for single tests were applied to each iteration. The Single Test Type I Error Rate (STER) for the simple effect and the interaction, as well as the HER where both the simple effect and interaction are significant, were caculated. Results are displayed in Figure \@ref(fig:simu-her)
 
 ```{r}
 Ns <- c(10, 30, 50, 75, 100, 150, 200, 300, 500, 1000)
+# function for simulation is saved in R/funcs.R
 # you may want to use less cores and this simulation may take several hours
-simu_N <- simu_null(iter=5000, N=Ns, n_core = 18,
-                    file_cache = here::here("simulation", "simu_N.rds"))
-simu_alpha(simu_N, alpha = .1)
+simu_within <- simu_null(iter=5000, N=Ns, n_core = 18,
+                         file_cache = here::here("simulation", "simu_within.rds"))
+# simu_alpha(simu_within)
 ```
+
+(ref:simu-her-caption) Type I error rates at both single test and hypothesis-based levels when different $\alpha$ is applied to single tests. The dashed lines denote the Single Test Type I Error Rate (STER) for the interaction and simple effect, respectively. The solid line denotes the Hypothesis-based Type I Error Rate (HER) for claiming the composite effect, i.e., both the interaction and simple effect are significant. The gray dashed and solid lines denote STER and HER for simulated data with different sample sizes (varying from 10 to 1000) and black lines are the means of these error rates. Error rates are similar for data with varied sample sizes. STER for the interaction and simple effect matched the corresponding $\alpha$, while HER is about half of the $\alpha$. For instance, when alpha of 0.1 is applied to single tests as indicated by the vertical dashed line, HER is just below 0.05, an conventionally acceptable threshold as indicated by the horizontal dashed line.   
+
+```{r simu-her, fig.asp=.75, fig.cap="(ref:simu-her-caption)"}
+# alpha_ls <- c(.5, .4, .3, .2, .1, .05, .01, .001, .0001)
+alpha_ls <- c(.3, .2, .15, .1, .05, .01, .001, .0001)
+df_alpha <- map_dfr(alpha_ls, simu_alpha, 
+               df_simu=simu_within, disp=F, .id="alpha_int") %>% 
+  mutate(alpha=alpha_ls[as.integer(alpha_int)]) 
+
+df_alpha_mean <- df_alpha %>% 
+  group_by(effects, alpha) %>% 
+  select(effects, alpha, Type_I) %>% 
+  summarize(Type_I_mean = mean(Type_I), .groups = "keep")
+  
+df_alpha %>% 
+  ggplot(aes(alpha, Type_I, linetype=effects)) +
+  geom_point(alpha=.5) +
+  geom_line(aes(group=interaction(N, effects, sep = "-")), alpha=.2, show.legend=F) +
+  geom_line(data=df_alpha_mean, aes(y=Type_I_mean), size=1) +
+  geom_hline(yintercept = .05, linetype="dashed") +
+  geom_vline(xintercept = .1, linetype="dashed") +
+  scale_linetype_discrete(labels=c("HER", "STER: interaction", "STER: simple effect")) +
+  scale_y_continuous(breaks=seq(0,.3,.05)) +
+  scale_x_continuous(breaks=seq(0,.3,.05)) +
+  labs(x=expression(alpha~"level for a single test"),
+       y="Type I error rate") +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.85, 0.155)) +
+  NULL
+
+```
+
+```{r}
+# function for simulation is saved in R/funcs.R
+# you may want to use less cores and this simulation may take hours
+simu_between <- simu_null(iter=5000, N=Ns, rho=0, n_core = 18,
+                          file_cache = here::here("simulation", "simu_between.rds"))
+# simu_alpha(simu_between)
+```
+
+
+```{r fig.asp=.75}
+# alpha_ls <- c(.5, .4, .3, .2, .1, .05, .01, .001, .0001)
+alpha_ls <- c(.3, .2, .15, .1, .05, .01, .001, .0001)
+df_alpha_b <- map_dfr(alpha_ls, simu_alpha, 
+               df_simu=simu_between, disp=F, .id="alpha_int") %>% 
+  mutate(alpha=alpha_ls[as.integer(alpha_int)]) 
+
+df_alpha_b_mean <- df_alpha_b %>% 
+  group_by(effects, alpha) %>% 
+  select(effects, alpha, Type_I) %>% 
+  summarize(Type_I_mean = mean(Type_I), .groups = "keep")
+  
+df_alpha_b %>% 
+  ggplot(aes(alpha, Type_I, linetype=effects)) +
+  geom_point(alpha=.5) +
+  geom_line(aes(group=interaction(N, effects, sep = "-")), alpha=.2, show.legend=F) +
+  geom_line(data=df_alpha_b_mean, aes(y=Type_I_mean), size=1) +
+  geom_hline(yintercept = .05, linetype="dashed") +
+  geom_vline(xintercept = .1, linetype="dashed") +
+  scale_linetype_discrete(labels=c("HER", "STER: interaction", "STER: simple effect")) +
+  labs(x=expression(alpha~"level for a single test"),
+       y="Type I error rate") +
+  theme(legend.title = element_blank(),
+        legend.position = c(0.85, 0.17),
+        legend.margin=margin(0, 20, 20, 10)) +
+  NULL
 
 ```
 
