@@ -19,19 +19,18 @@ keywords          : "ANOVA, simple interaction analysis, custom contrast, compos
 wordcount         : "X"
 bibliography      : ["r-references.bib"]
 
-figsintext        : no
-figurelist        : no
-tablelist         : no
-footnotelist      : no
-linenumbers       : no
-mask              : no
-draft             : no
-floatsintext      : yes
+figurelist        : false
+tablelist         : false
+footnotelist      : false
+linenumbers       : false
+mask              : false
+draft             : false
+floatsintext      : true
 
 documentclass     : "apa6"
 classoption       : "man"
-numbersections    : yes
-link-citations    : yes
+numbersections    : false
+link-citations    : true
 
 output:
     # papaja::apa6_word:
@@ -40,46 +39,32 @@ output:
         toc: no
         toc_depth: 3
         highlight: default
-        number_sections: true
         latex_engine: xelatex
         
 date: "`r format(Sys.time(), '%d-%m-%Y')`"
 
 header-includes   :
 - \usepackage{booktabs}
-# - \usepackage{amsmath}  
-# - \usepackage[american]{babel}
-# - \usepackage[utf8]{inputenc}
+- \usepackage{amsmath}
+- \usepackage[american]{babel}
+- \usepackage[utf8]{inputenc}
 # - \usepackage[T1]{fontenc}
-# - \usepackage[backend=biber,useprefix=true,style=apa,url=false,doi=false,sorting=nyt,eprint=false]{biblatex}
-# - \DeclareLanguageMapping{american}{american-apa}
-# - \usepackage{fancyvrb}
-# - \usepackage{newfloat}
-# - \usepackage{graphicx}
-# - \usepackage{caption}
-# - \usepackage{listings}
-# - \usepackage{placeins}
-# - \usepackage{graphicx,pdflscape}
-# - \usepackage{geometry}
-# - \usepackage{float}
-# - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
+- \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
 ---
 
 ```{r setup and load the related libraries, include=FALSE}
 ## load libraries
 library(knitr)
 library(tidyverse)
-library(mvtnorm)
 library(afex)
 library(emmeans)
 library(lme4)
-library(ggpubr)
-library(here)
 library(papaja)
 
 theme_set(theme_apa())
 
 # set global chunk options, put figures into folder
+options(tinytex.verbose = TRUE)
 options(warn=-1, replace.assign=TRUE)
 knitr::opts_chunk$set(
   echo = FALSE,
@@ -129,9 +114,9 @@ sd <- 0.5   # the same standard deviation/variances were used
 C <- matrix(rho, nrow = 2, ncol = 2)
 diag(C) <- 1
 
-simu_control <- rmvnorm(N, c(mean_pre, delta[1]), sigma = C*sd^2)
-simu_protocal1 <- rmvnorm(N, c(mean_pre, delta[2]), sigma = C*sd^2)
-simu_protocal2 <- rmvnorm(N, c(mean_pre, delta[3]), sigma = C*sd^2)
+simu_control <- mvtnorm::rmvnorm(N, c(mean_pre, delta[1]), sigma = C*sd^2)
+simu_protocal1 <- mvtnorm::rmvnorm(N, c(mean_pre, delta[2]), sigma = C*sd^2)
+simu_protocal2 <- mvtnorm::rmvnorm(N, c(mean_pre, delta[3]), sigma = C*sd^2)
 
 df_simu_train <- rbind(simu_control, simu_protocal1, simu_protocal2) %>% 
   as_tibble() %>% 
@@ -146,7 +131,8 @@ The "truth" for each conditions is:
 tibble(Test = c("pre-test", "post-test"),
        control = c(mean_pre, delta[1]),
        protocol1 = c(mean_pre, delta[2]),
-       protocol2 = c(mean_pre, delta[3]))
+       protocol2 = c(mean_pre, delta[3])) %>% 
+  apa_table()
 ```
 
 The structure of the simulated data is as followings:
@@ -231,7 +217,7 @@ When using repeated-measures ANOVA, we need to test (1) one simple effect, i.e. 
 
 ```{r include=FALSE}
 # read and make the data into long format
-df_cf_wide <- read_csv(here("data", "Jin_E1_d_wide.csv"))
+df_cf_wide <- read_csv(here::here("data", "Jin_E1_d_wide.csv"))
 df_cf_long <- df_cf_wide %>% 
   pivot_longer(contains("."),names_to=c("Congruency", "Alignment"), 
                names_sep="[.]", values_to="d")
@@ -320,48 +306,40 @@ summary(contrast(emm_lmm, method="pairwise", by="Alignment"), side=">")
 summary(contrast(emm_lmm, interaction="pairwise"), side=">") 
 ```
 
-# Appendix 3: simulation for Hypothesis-based Type I Error Rate
+# Appendix 3: simulation for Hypothesis-based Type I Error Rate 
 
 Here we simulate data sets with null effects and then calculate the Single Test Type I Error Rate (STER) and HER.  
 ```{r}
+
 # function for simulating data
-simu_null <- function(iter=1000, N=30, rho=.5, sd=1, 
-                      alpha=NULL, seed=12){
-  # iter: number of simulation;
+simu_null <- function(iter=100, N=30, rho=.5, sd=1, n_core=2,
+                      file_cache=NULL){
+  # iter: iteration number for each sample size
   # N: sample size;
   # rho: the correlations among conditions
   # sd: standard deviations for each condition
-  # alpha: the alpha level to be applied; not used in simulation
-  # seed: to make sure the simulation is reproducible
-  library(tidyverse)
-  library(emmeans)
-  library(afex)
+  # n_core: number of cores to run the simulation
+  # file: file name of the cache file. If NULL, no file will be cached.
   
-  set.seed(seed)
-  
-  mean <- rep(3, 4)
-  C <- matrix(rho, nrow = 4, ncol = 4)
-  diag(C) <- 1
-  
-  # initialization for saving p-values
-  p_simple <- rep(NA, iter)
-  p_inter <- rep(NA, iter)
-  
-  for (i in 1:iter) {
+  # source the function for single iteration
+  simu_null_single <- function(N_s=N, rho_s=rho, sd_s=sd){
+    library(tidyverse)
+    library(emmeans)
     
-    if (i %% 50 == 0) {
-      message(sprintf("Iteration: %d/%d", i, iter))
-    }
+    mean <- rep(3, 4)
+    C <- matrix(rho_s, nrow = 4, ncol = 4)
+    diag(C) <- 1
     
-    simu_null3 <- mvtnorm::rmvnorm(N, mean, sigma = C*sd^2) %>% 
+    simu_null3 <- mvtnorm::rmvnorm(N_s, mean, sigma = C*sd_s^2) %>% 
       as_tibble(.name_repair = NULL) %>% 
       transmute(Subj = 1:n(),
                 congruent_aligned = V1,  incongruent_aligned = V2,
                 congruent_misaligned = V3, incongruent_misaligned = V4) %>% 
       pivot_longer(contains("_"), names_to = c("Congruency", "Alignment"), 
                    values_to = "d", names_sep = "_")
-    aov_tmp <- aov_4(d ~ Congruency * Alignment + (Congruency * Alignment | Subj),
-                     data = simu_null3) 
+    
+    aov_tmp <- afex::aov_4(d ~ Congruency * Alignment + (Congruency * Alignment | Subj),
+                           data = simu_null3) 
     
     # simple effect 
     tmp_simple <- contrast(emmeans(aov_tmp, ~Congruency|Alignment), "pairwise") %>% 
@@ -372,27 +350,60 @@ simu_null <- function(iter=1000, N=30, rho=.5, sd=1,
                           interaction="pairwise") %>% 
       as_tibble()
     
-    p_simple[i] <- tmp_simple$p.value
-    p_inter[i] <- tmp_inter$p.value
+    p_simple <- tmp_simple$p.value
+    p_inter <- tmp_inter$p.value
+    
+    rawp <- tibble(N = N_s,
+                   p_simple = p_simple,
+                   p_inter = p_inter,
+                   rho = rho_s,
+                   sd = sd_s)
+    
+    return(rawp)
   }
   
-  rawp <- tibble(p_simple = p_simple,
-                 p_inter = p_inter)
-  
-  if (!is.null(alpha)){
-    df_sig <- rawp %>% 
-      mutate(sig_simple = p_simple <= alpha,
-             sig_inter = p_inter <= alpha,
-             sig_both = sig_simple * sig_inter) %>% 
-      pivot_longer(everything(), names_to = "effects", values_to = "isSig") %>% 
-      group_by(effectrs) %>% 
-      summarize(N_sig = sum(isSig),
-                TypeI = mean(isSig))
+  if (!is.null(file_cache) && file.exists(as.character(file_cache))){
+    df_simu <- read_rds(file_cache)
   } else {
-    df_sig <- rawp
+    # set parallel processing
+    Ns <- rep(N, times=iter)
+    ls_tibble <- pbapply::pblapply(Ns, simu_null_single, cl = n_core)
+    df_simu <- reduce(ls_tibble, rbind) %>% 
+      mutate(iter=1:n())
+    
+    if (!is.null(file_cache)){
+      write_rds(df_simu, file=file_cache)
+    }
+  }
+ 
+  return(df_simu)
+}
+
+simu_alpha <- function(df_simu, alpha=.05, disp=TRUE){
+  # function to calculate the Type I error rate. 
+  # df_simu: dataframe obtained from simu_null
+  # alpha: alpha level used to calculate the Type I error rate.
+  # disp: if true, the output will be a wide format. If false, it will be long.
+  
+  df_sig <- df_simu %>% 
+    mutate(sig_simple = p_simple <= alpha,
+           sig_inter = p_inter <= alpha,
+           sig_both = sig_simple * sig_inter) %>% 
+    select(N, starts_with("sig_")) %>% 
+    pivot_longer(starts_with("sig_"), names_to = "effects", values_to = "isSig") %>% 
+    group_by(N, effects) %>% 
+    summarize(N_iter = n(),
+              N_sig = sum(isSig),
+              Type_I = mean(isSig),
+              .groups="keep")
+  
+  if (disp){
+    df_sig <- df_sig %>% 
+      select(-c(N_sig)) %>% 
+      pivot_wider(c(N, N_iter), names_from = "effects", values_from = "Type_I")
   }
   
-  return(rawp=rawp)
+  return(df_sig)
 }
 
 ```
@@ -401,28 +412,11 @@ RM-ANOVA and ANOVA are the same?
 
 ```{r}
 Ns <- c(10, 30, 50, 75, 100, 150, 200, 300, 500, 1000)
-
-file_simu_N <- here::here("simulation", "simu_N.rds")
-if (!file.exists(file_simu_N)){
-  simu_N <- map_dfr(c(10, 10, 10), simu_null, iter=5000, .id="N_id")
-  write_rds(simu_N, file=file_simu_N)
-} else {
-  simu_N <- read_rds(file_simu_N)
-}
-
-alpha_t <- 0.05
-simu_N %>%
-  mutate(N = Ns[as.integer(N_id)]) %>%
-  mutate(sig_simple = p_simple <= alpha_t,
-         sig_inter = p_inter <= alpha_t,
-         sig_both = sig_simple * sig_inter) %>%
-  select(-c(N_id, p_simple, p_inter)) %>%
-  pivot_longer(starts_with("sig_"), names_to = "effects", values_to = "isSig") %>%
-  group_by(N, effects) %>%
-  summarize(N_sig = sum(isSig),
-            TypeI = mean(isSig),
-            .groups = "keep") %>%
-  pivot_wider(N, names_from = "effects", values_from = TypeI)
+# you may want to use less cores and this simulation may take several hours
+simu_N <- simu_null(iter=5000, N=Ns, n_core = 18,
+                    file_cache = here::here("simulation", "simu_N.rds"))
+simu_alpha(simu_N, alpha = .1)
+```
 
 ```
 
