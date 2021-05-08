@@ -62,7 +62,7 @@ header-includes   :
 # - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
 ---
 
-```{r setup and load the related libraries, include=FALSE}
+```{r setup and load the related libraries, appendix, include=FALSE}
 ## load libraries
 library(knitr)
 library(tidyverse)
@@ -126,8 +126,8 @@ params_ss <- list(
 )
 
 set.seed(2021)
-(df_simu_ss <- simudata_lmm(params = params_ss))
-
+df_simu_ss <- simudata_lmm(params = params_ss)
+str(df_simu_ss)
 ```
 
 ```{r}
@@ -176,8 +176,8 @@ params_sn <- list(
 )
 
 set.seed(2021)
-(df_simu_sn <- simudata_lmm(params = params_sn))
-
+df_simu_sn <- simudata_lmm(params = params_sn)
+str(df_simu_sn)
 ```
 
 ```{r}
@@ -225,8 +225,8 @@ params_ns <- list(
 )
 
 set.seed(2021)
-(df_simu_ns <- simudata_lmm(params = params_ns))
-
+df_simu_ns <- simudata_lmm(params = params_ns)
+str(df_simu_ns)
 ```
 
 ```{r}
@@ -274,8 +274,8 @@ params_nn <- list(
 )
 
 set.seed(2021)
-(df_simu_nn <- simudata_lmm(params = params_nn))
-
+df_simu_nn <- simudata_lmm(params = params_nn)
+str(df_simu_nn)
 ```
 
 ```{r}
@@ -407,17 +407,11 @@ rbind(mutate(as_tibble(emm_simu_ss),
   labs(x="Alignment", y=expression("Sensitivity"~italic("d'")),
        color="Congruency", linetype="Congruency") +
   ylim(c(2.25, 4.45)) +
-  theme_apa_nostrip() +
+  # theme_apa_nostrip() +
   # theme(legend.position="bottom") +
   theme(legend.position=c(.5,.55), legend.direction="horizontal") +
   NULL
 
-# ggsave(file="inter_simple_sig.png", width = 7.2, height = 5.4)
-```
-
-
-# Reference {.unnumbered}
-```{r create_r-references, echo=F, cache = FALSE}
-papaja::r_refs(file = "r-references.bib")
+# ggsave(file=here::here("images", "inter_simple_sig.png", width = 7.2, height = 5.4)
 ```
 
