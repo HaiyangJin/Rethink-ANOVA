@@ -4,28 +4,17 @@ shorttitle         : "Figures Rethink ANOVA"
 
 author: 
   - name: "Haiyang Jin"
-    affiliation: "1"
+    affiliation: ""
     address: "New York University Abu Dhabi, Saadiyat Isalnd, Abu Dhabi, United Arab Emirates"
     email: "haiyang.jin@nyu.edu"
     corresponding: yes
-  - name: "Yuzhu Ji"
-    affiliation : "2"
-    email: "haiyang.jin@nyu.edu"
-  - name: "William G. Hayward"
-    affiliation : "3"
-    email: "whayward@hku.hk"
     
 affiliation:
-  - id            : "1"
+  - id            : ""
     institution   : "New York University Abu Dhabi"
-  - id            : "2"
-    institution   : "Zhejiang University of Technology"
-  - id            : "3"
-    institution   : "University of Hong Kong"
   
 authornote        : |
   This is the appendices for the rethinking ANOVA paper.
-bibliography      : ["r-references.bib"]
 
 figsintext        : no
 figurelist        : no
