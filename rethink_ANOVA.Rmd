@@ -1,5 +1,5 @@
 ---
-title             : 'Appendices for "Hello again, ANOVA! Rethink ANOVA as a confirmatory data analysis"'
+title             : 'Appendices for "Hello again, ANOVA! Rethink ANOVA in the context of confirmatory data analysis"'
 shorttitle         : "Appendices for Rethink ANOVA"
 
 author: 
@@ -14,7 +14,7 @@ affiliation:
     institution   : "New York University Abu Dhabi"
   
 authornote        : |
-  This is the appendices for "Hello again, ANOVA! Rethink ANOVA as a confirmatory data analysis".
+  This is the appendices for "Hello again, ANOVA! Rethink ANOVA in the context of confirmatory data analysis".
 keywords          : "analysis of variances; practical applications; confirmatory data analysis; hypothesis-based Type I error rate; simple interaction analysis"
 wordcount         : "X"
 
@@ -49,7 +49,7 @@ header-includes   :
 - \usepackage[utf8]{inputenc}
 # - \usepackage[T1]{fontenc}
 - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
-bibliography: references.bib
+bibliography: r-references.bib
 ---
 
 ```{r setup and load the related libraries, include=FALSE}
@@ -260,30 +260,6 @@ ggplot(as_tibble(emm_aov),
   theme(text = element_text(size = 18))
 ```
 
-## One-sample t-test
-
-As we discussed earlier, CFE mainly refers to (1) the performance for congruent trials are better than incongruent trials in the aligned condition, i.e., observing the Congruency effect, and (2) the Congruency effect is stronger in the aligned relative to misaligned condition. Notably, we could test the Congruency effect in the aligned condition with the pairwise comparison between congruent_aligned and incongruent_aligned trials. In addition,
-
-Alternatively, calculate the differences of differences (i.e., $(d'_{congruent/aligned} - d'_{incongruent/aligned}) - (d'_{congruent/misaligned} - d'_{incongruent/misaligned})$) and test it against 0 [e.g., @Chua2014a; @Wang2019].
-
-```{r, echo=T}
-df_cf_d <- df_cf_wide %>% 
-  mutate(d_cf = (congruent.aligned-incongruent.aligned)-
-           (congruent.misaligned-incongruent.misaligned)) 
-
-t.test(df_cf_d$d_cf)
-```
-
-```{r}
-t.test(df_cf_d$d_cf, alternative="greater")
-```
-
-```{r}
-t.test(df_cf_d$congruent.aligned, df_cf_d$congruent.misaligned, 
-       paired = TRUE,
-       alternative="greater")
-```
-
 ## Linear mixed-effects models
 
 When linear mixed-effects models (LMM) are used, we need to examine (1) whether there is Congruency effect in the aligned condition (i.e., whether the performance on congruent trials is better than that on incongruent trials in the aligned condition), and (2) whether the Congruency effect in the aligned condition is larger than that in the misaligned condition. For simplicity, condition means of each participant and the intercept-only model are used in this analysis. It is typically more beneficial to conduct LMM with full random-effects structure on the trial-level data. Anyhow, these simplification would not invalidate the following demonstration.
@@ -295,17 +271,6 @@ round(summary(cf_lmm)$coefficients, 3)  # only show results of fixed effects
 ```
 
 With the default dummy coding in R, `Congruencyincongruent` examines how much the performance on aligned incongruent trails is larger than that on aligned congruent trials, which is significantly smaller than 0. `Congruencyincongruent:Alignmentmisaligned` examines the how much the Congruency effect in the aligned condition is larger than that in the misaligned condition, which is significantly larger than 0. In other words, the Congruency effect in the aligned condition is larger than 0, and it is also larger than that in the misaligned condition. With this evidence, we may claim the observation of the composite effect in this study. Note that since our predictions are directional, we may use one-sided, instead of two-sided, tests. For instance, we may use t-value of 1.65 instead of 1.96 as the threshold to claim the significant effect.
-
-Try one-sided test:
-
-```{r}
-emm_lmm <- emmeans(cf_lmm, ~ Congruency + Alignment)
-summary(contrast(emm_lmm, method="pairwise", by="Alignment"), side=">") 
-```
-
-```{r}
-summary(contrast(emm_lmm, interaction="pairwise"), side=">") 
-```
 
 # Appendix 3: simulation for calculating Hypothesis-based Type I Error Rate
 
@@ -351,45 +316,8 @@ df_alpha %>%
 
 ```
 
-```{r}
-# function for simulation is saved in R/funcs.R
-# you may want to use less cores and this simulation may take hours
-simu_between <- simu_null(iter=5000, N=Ns, rho=0, n_core = 18,
-                          file_cache = here::here("simulation", "simu_between.rds"))
-# simu_alpha(simu_between)
-```
-
-```{r fig.asp=.75}
-# alpha_ls <- c(.5, .4, .3, .2, .1, .05, .01, .001, .0001)
-alpha_ls <- c(.3, .2, .15, .1, .05, .01, .001, .0001)
-df_alpha_b <- map_dfr(alpha_ls, simu_alpha, 
-               df_simu=simu_between, disp=F, .id="alpha_int") %>% 
-  mutate(alpha=alpha_ls[as.integer(alpha_int)]) 
-
-df_alpha_b_mean <- df_alpha_b %>% 
-  group_by(effects, alpha) %>% 
-  select(effects, alpha, Type_I) %>% 
-  summarize(Type_I_mean = mean(Type_I), .groups = "keep")
-  
-df_alpha_b %>% 
-  ggplot(aes(alpha, Type_I, linetype=effects)) +
-  geom_point(alpha=.5) +
-  geom_line(aes(group=interaction(N, effects, sep = "-")), alpha=.2, show.legend=F) +
-  geom_line(data=df_alpha_b_mean, aes(y=Type_I_mean), size=1) +
-  geom_hline(yintercept = .05, linetype="dashed") +
-  geom_vline(xintercept = .1, linetype="dashed") +
-  scale_linetype_discrete(labels=c("HER", "STER: interaction", "STER: simple effect")) +
-  labs(x=expression(alpha~"level for a single test"),
-       y="Type I error rate") +
-  theme(legend.title = element_blank(),
-        legend.position = c(0.85, 0.17),
-        legend.margin=margin(0, 20, 20, 10)) +
-  NULL
-
-```
-
 # Reference {.unnumbered}
 
 ```{r create_r-references, echo=F, cache = FALSE}
-papaja::r_refs(file = "references.bib")
+papaja::r_refs(file = "r-references.bib")
 ```
