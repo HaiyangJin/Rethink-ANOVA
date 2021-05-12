@@ -49,7 +49,7 @@ header-includes   :
 - \usepackage[utf8]{inputenc}
 # - \usepackage[T1]{fontenc}
 - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
-bibliography: ["`r rbbt::bbt_write_bib('references.bib', overwrite = TRUE)`", "r-references.bib"]
+bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/r-references.bib"]
 ---
 
 ```{r setup and load the related libraries, include=FALSE}
