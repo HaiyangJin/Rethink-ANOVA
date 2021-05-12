@@ -1,12 +1,12 @@
 ---
-title             : "Figures used in rethink ANOVA"
-shorttitle         : "Figures Rethink ANOVA"
+title             : "Figure 1 used in rethink ANOVA"
+shorttitle         : "Figure 1 in Rethink ANOVA"
 
 author: 
   - name: "Haiyang Jin"
     affiliation: ""
     address: "New York University Abu Dhabi, Saadiyat Isalnd, Abu Dhabi, United Arab Emirates"
-    email: "haiyang.jin@nyu.edu"
+    email: "haiyang.jin@outlook.com"
     corresponding: yes
     
 affiliation:
@@ -14,52 +14,10 @@ affiliation:
     institution   : "New York University Abu Dhabi"
   
 authornote        : |
-  This is the appendices for the rethinking ANOVA paper.
-
-figsintext        : no
-figurelist        : no
-tablelist         : no
-footnotelist      : no
-linenumbers       : no
-mask              : no
-draft             : no
-floatsintext      : yes
-
-documentclass     : "apa6"
-classoption       : "man"
-numbersections    : yes
-link-citations    : yes
-
-output:
-    # papaja::apa6_word:
-    #     toc: no
-    papaja::apa6_pdf:
-        toc: no
-        toc_depth: 3
-        highlight: default
-        number_sections: true
-        latex_engine: xelatex
+  This is the code for creating the Figure 1 in the rethinking ANOVA paper.
         
 date: "`r format(Sys.time(), '%d-%m-%Y')`"
 
-header-includes   :
-- \usepackage{booktabs}
-# - \usepackage{amsmath}  
-# - \usepackage[american]{babel}
-# - \usepackage[utf8]{inputenc}
-# - \usepackage[T1]{fontenc}
-# - \usepackage[backend=biber,useprefix=true,style=apa,url=false,doi=false,sorting=nyt,eprint=false]{biblatex}
-# - \DeclareLanguageMapping{american}{american-apa}
-# - \usepackage{fancyvrb}
-# - \usepackage{newfloat}
-# - \usepackage{graphicx}
-# - \usepackage{caption}
-# - \usepackage{listings}
-# - \usepackage{placeins}
-# - \usepackage{graphicx,pdflscape}
-# - \usepackage{geometry}
-# - \usepackage{float}
-# - \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
 ---
 
 ```{r setup and load the related libraries, appendix, include=FALSE}
