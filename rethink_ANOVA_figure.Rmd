@@ -97,7 +97,7 @@ aov_simu_ss
 
 ```{r}
 emm_simu_ss <- emmeans(aov_simu_ss, ~ IV1 + IV2)
-(contr_simu_ss <- contrast(emm_simu_ss, "pairwise", adjust="none"))
+(contr_simu_ss <- contrast(emm_simu_ss, "pairwise", adjust="none"))[c(1,2,5,6)]
 ```
 
 ```{r}
@@ -147,7 +147,7 @@ aov_simu_sn
 
 ```{r}
 emm_simu_sn <- emmeans(aov_simu_sn, ~ IV1 + IV2)
-(contr_simu_sn <- contrast(emm_simu_sn, "pairwise", adjust="none"))
+(contr_simu_sn <- contrast(emm_simu_sn, "pairwise", adjust="none"))[c(1,2,5,6)]
 ```
 
 ```{r}
@@ -196,7 +196,7 @@ aov_simu_ns
 
 ```{r}
 emm_simu_ns<- emmeans(aov_simu_ns, ~ IV1 + IV2)
-(contr_simu_ns <- contrast(emm_simu_ns, "pairwise", adjust="none"))
+(contr_simu_ns <- contrast(emm_simu_ns, "pairwise", adjust="none"))[c(1,2,5,6)]
 ```
 
 ```{r}
@@ -245,7 +245,7 @@ aov_simu_nn
 
 ```{r}
 emm_simu_nn<- emmeans(aov_simu_nn, ~ IV1 + IV2)
-(contr_simu_nn <- contrast(emm_simu_nn, "pairwise", adjust="none"))
+(contr_simu_nn <- contrast(emm_simu_nn, "pairwise", adjust="none"))[c(1,2,5,6)]
 ```
 
 ```{r}
@@ -277,16 +277,16 @@ df_inter <- rbind(
          `simple effect` = fct_relevel(`simple effect`, "significant", "nonsignificant"))
 
 df_simp <- rbind(
-  mutate(filter(as_tibble(contr_simu_ss), p.value==min(p.value)),
+  mutate(filter(as_tibble(contr_simu_ss)[c(1,2,5,6)], p.value==min(p.value)),
          interaction = "significant", `simple effect` = "significant",
          x = 1.5, y = 2.85),
-  mutate(filter(as_tibble(contr_simu_sn), p.value==min(p.value)),
+  mutate(filter(as_tibble(contr_simu_sn)[c(1,2,5,6)], p.value==min(p.value)),
          interaction = "significant", `simple effect` = "nonsignificant",
          x = 1.5, y = 2.85),
-  mutate(filter(as_tibble(contr_simu_ns), p.value==min(p.value)),
+  mutate(filter(as_tibble(contr_simu_ns)[c(1,2,5,6)], p.value==min(p.value)),
          interaction = "nonsignificant", `simple effect` = "significant",
          x = 1.5, y = 2.85),
-  mutate(filter(as_tibble(contr_simu_nn), p.value==min(p.value)),
+  mutate(filter(as_tibble(contr_simu_nn)[c(1,2,5,6)], p.value==min(p.value)),
          interaction = "nonsignificant", `simple effect` = "nonsignificant",
          x = 1.5, y = 2.85)
 ) %>% 
