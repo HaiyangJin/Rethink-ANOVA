@@ -9,20 +9,20 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
   # N_IV: number of independent variables (each has two levels)
   # seed: seed used for simulation
   
-  IV_list <- letters[1:N_IV]
-
-  level_list <- lapply(IV_list, function(x){
-    return(paste0(x,1:2))
-  })
+  set.seed(seed)
   
-  df_IV <- expand.grid(level_list, KEEP.OUT.ATTRS = F)
-  names(df_IV) <- toupper(IV_list)
-  
-  df_IV_subj <- do.call("rbind", replicate(N_subj, df_IV, simplify = FALSE))
-  
-  formulastr <- paste0("DV ~ ", paste(sprintf("%s * ", toupper(IV_list[1:N_IV-1])), collapse = ""), toupper(IV_list[-1]))
-  
-  sim_omni_single <- function(df_IV_subj){
+  sim_omni_single <- function(N_IV){
+    
+    IV_list <- letters[1:N_IV]
+    
+    level_list <- lapply(IV_list, function(x){
+      return(paste0(x,1:2))
+    })
+    
+    df_IV <- expand.grid(level_list, KEEP.OUT.ATTRS = F)
+    names(df_IV) <- toupper(IV_list)
+    
+    df_IV_subj <- do.call("rbind", replicate(N_subj, df_IV, simplify = FALSE))
     
     # simulate data
     df_omni_sim <- df_IV_subj %>% 
@@ -30,11 +30,17 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
              DV = rnorm(n())) %>% 
       as_tibble()
     
-    aov_omni <- car::Anova(lm(as.formula(formulastr), data = df_omni_sim), type=3)
+    # formula
+    formulastr <- paste0("DV ~ ", 
+                         paste(sprintf("%s * ", toupper(IV_list[1:N_IV-1])), collapse = ""), 
+                         toupper(IV_list[N_IV]),
+                         " + (1|Subj)")
+    
+    aov_omni <- aov_4(as.formula(formulastr), data = df_omni_sim)
     
     # calculate omnibus F-test
-    sumsq_all <- aov_omni$`Sum Sq`[-1]
-    dfn_all <- aov_omni$Df[-1]
+    sumsq_all <- aov_omni$Anova$`Sum Sq`[-1]
+    dfn_all <- aov_omni$Anova$Df[-1]
     
     sumsq_IV <- sum(sumsq_all[-length(sumsq_all)])
     sumsq_re <- sumsq_all[length(sumsq_all)]
@@ -46,13 +52,12 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
     F_omni <- sumsq_IV/dfn_IV/(sumsq_re/dfn_re)
     p_omni <- pf(F_omni, dfn_IV, dfn_re, lower.tail = F)
     
-    p.value <- aov_omni$`Pr(>F)`[c(-1, -length(aov_omni$`Pr(>F)`))] 
-    effnames <- row.names(aov_omni)[c(-1, -length(aov_omni$`Pr(>F)`))] 
+    p.value <- c(aov_omni$Anova$`Pr(>F)`[c(-1, -length(aov_omni$Anova$`Pr(>F)`))], p_omni)
+    effnames <- c(row.names(aov_omni$Anova)[c(-1, -length(aov_omni$Anova$`Pr(>F)`))], "omniF") 
     
     p_df <- tibble(effnames = effnames,
-           p.value = p.value) %>% 
-      pivot_wider(names_from = effnames, values_from = p.value) %>% 
-      mutate(omniF = p_omni)
+                   p.value = p.value) %>% 
+      mutate(N_IV = N_IV)
     
     return(p_df)
   }
@@ -64,9 +69,8 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
     
   } else {
     # set parallel processing
-    df_IV_subj_multi <- rep(list(df_IV_subj), times=iter)
-    ls_tibble <- pbapply::pblapply(df_IV_subj_multi, sim_omni_single,  
-                                   cl=n_core)
+    Ns_IV <- rep(N_IV, times=iter)
+    ls_tibble <- pbapply::pblapply(Ns_IV, sim_omni_single, cl=n_core)
     df_simu <- bind_rows(ls_tibble, .id = "iter")
     
     if (!is.null(file_cache)){
@@ -75,7 +79,40 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
   }
   
   return(df_simu)
+}
+
+sig_omnibus <- function(df_simu_p, alphas=0.05){
   
+  sig_omnibus_single <- function(df_simu_p, thealpha){
+    
+    df_simu_sig_long <- df_simu_p %>% 
+      mutate(sig = p.value < thealpha,
+             alpha = thealpha)
+    
+    df_simu_sig_omni <- df_simu_sig_long %>% 
+      filter(effnames != "omniF") %>% 
+      group_by(iter, N_IV, alpha) %>% 
+      summarize(N_sig = sum(sig), 
+                effnames = "sig_any",
+                alpha = thealpha,
+                sig = N_sig > 0, .groups="drop") %>% 
+      bind_rows(df_simu_sig_long)
+    
+    df_simu_sig <- df_simu_sig_long %>% 
+      filter(effnames == "omniF") %>% 
+      select(-p.value) %>% 
+      pivot_wider(names_from = effnames, values_from = sig) %>% 
+      right_join(df_simu_sig_omni, by=c("iter", "N_IV", "alpha")) %>% 
+      # filter(effnames != "omniF") %>% 
+      mutate(sig_with_omni = omniF * sig)
+    
+    return(df_simu_sig)
+  }
+  
+  # combine results with multiple alphas
+  ltmp <- lapply(alphas, sig_omnibus_single, df_simu_p=df_simu_p)
+  
+  return(bind_rows(ltmp))
 }
 
 ##### Main effect and post-hoc analysis #####
@@ -109,9 +146,9 @@ sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
     )
     
     # perform ANOVA
-    aov_main <- aov(DV ~ IV, df_main_sim)
+    aov_main <- aov_4(DV ~ IV + (1|Subj), df_main_sim)
     # significance of the main effect
-    p_main <- summary(aov_main)[[1]]$`Pr(>F)`[1]
+    p_main <- aov_main$Anova$`Pr(>F)`[2]
     
     # perform post-hoc (regardless of main effect significance)
     emm <- emmeans(aov_main, ~ IV)
@@ -223,7 +260,7 @@ sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
       DV = rnorm(N_subj*4) 
     )
     
-    aov_tmp <- aov(DV ~ IV_A * IV_B, data = df_null)
+    aov_tmp <- aov_4(DV ~ IV_A * IV_B + (1|Subj), data = df_null)
     
     # interaction
     tmp_inter <- contrast(emmeans(aov_tmp, ~IV_A+IV_B),

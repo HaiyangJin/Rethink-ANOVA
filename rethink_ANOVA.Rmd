@@ -95,9 +95,28 @@ alphas <- c(0.001, 0.005, 0.01, 0.05, (1:4)/10)  # 0.001 ~ 0.4
 ## ANOVA omnibus F-test
 
 ```{r}
-p_main_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16, 
-                           file_cache = here::here("simulation", "p_omni.rds"),
-                           N_IV = 2, seed = 2022)
+p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16, 
+                      file_cache = here::here("simulation", "p_omni.rds"),
+                      N_IV = 2:5)
+```
+
+
+```{r}
+dfs_sig_omni <- sig_omnibus(p_omni, 0.05) 
+
+dfs_sig_omni %>% 
+  select(-c(N_sig, p.value)) %>% 
+  group_by(N_IV, effnames) %>% 
+  summarize(TypeI = mean(sig), .groups = "drop") %>% 
+  pivot_wider(names_from = effnames, values_from = TypeI)
+```
+
+```{r}
+dfs_sig_omni %>% 
+  select(-c(N_sig, p.value)) %>% 
+  group_by(N_IV, effnames) %>% 
+  summarize(TypeI_with_omni = mean(sig_with_omni), .groups = "drop") %>% 
+  pivot_wider(names_from = effnames, values_from = TypeI_with_omni)
 ```
 
 
@@ -108,14 +127,13 @@ One-way ANOVA with three levels
 # sim_main_posthoc is available in R/funcs.R
 p_main_posthoc <- sim_main_posthoc(N_subj = 30, iter = Nsim, n_core=16, 
                                    file_cache = here::here("simulation", "p_main_posthoc.rds"),
-                                   N_con = 3, seed = 2022) 
-p_main_posthoc
+                                   N_con = 4) 
 ```
 
 ```{r}
 df_TypeI_posthoc <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
   mutate(sig_anypost = N_sigpost > 0, # any of the pairwise comparison is significant
-         sig_both_main_post = sig_main * sig_anypost) %>% # both the main and any of pariwise are significant
+         sig_both_main_post = sig_main * sig_anypost) %>% # both the main and any of pairwise are significant
   group_by(alpha, adjust) %>% 
   summarize(TypeI_both = mean(sig_both_main_post), 
             TypeI_postonly = mean(sig_anypost),
@@ -150,8 +168,7 @@ df_TypeI_posthoc %>%
 
 ```{r}
 p_inter_simple <- sim_inter_simple(N_subj = 30, iter = Nsim, n_core=16, 
-                                   file_cache = here::here("simulation", "p_inter_simple.rds"),
-                                   seed = 2022)
+                                   file_cache = here::here("simulation", "p_inter_simple.rds"))
 ```
 
 ```{r}
