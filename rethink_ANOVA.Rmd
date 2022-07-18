@@ -1,8 +1,13 @@
 ---
-title             : ''
-shorttitle         : ""
+title             : "ANOVA conventions may not work as you wish"
+shorttitle         : "Rethinking ANOVA conventions"
 
 author: 
+  - name: "Yuzhu Ji"
+    affiliation: ""
+    address: ""
+    email: ""
+    corresponding: yes
   - name: "Haiyang Jin"
     affiliation: ""
     address: ""
@@ -58,6 +63,7 @@ library(tidyverse)
 library(afex)
 library(emmeans)
 library(lme4)
+library(vcd)
 library(papaja)
 
 options(emmeans=list(msg.interaction=FALSE))
@@ -82,7 +88,386 @@ source(here::here("R", "funcs.R"))
 set.seed(2022)
 ```
 
-\appendix
+```{r}
+df_publ <- readxl::read_excel(here::here("data", "Coding_sheet_pilot.xlsx"), 
+                              sheet="PaperMeta",
+                              range="A1:M13") %>% 
+  select("Paper ID", "Publication Title") %>% 
+  mutate(Publication = `Publication Title`)
+```
+
+
+# Intra-rater reliability
+
+## Research article and ANOVA
+```{r}
+df_inc_K <- readxl::read_excel(here::here("data", "Coding_sheet_pilot.xlsx"), 
+                               sheet="ResearchPaper",
+                               range="A1:L13") %>% 
+  select(-Title)
+  # transmute(research = paste(`Research article_YJ`, `Research article_HJ`, sep="_"),
+  #        useanova = paste(`Use ANOVA_YJ`, `Use ANOVA_HJ`, sep = "_")) 
+```
+
+
+```{r}
+# use ANOVA
+# df_res_K <-df_inc_K %>% 
+#   select(`Research article_YJ`, `Research article_HJ`) %>% 
+#   group_by(`Research article_YJ`) %>% 
+#   summarize(count = n(), .groups = "drop") %>% 
+#   pivot_wider(names_from=`Research article_HJ`, values_from = count, values_fill = 0) 
+
+Ka_res <- df_res_K %>% 
+  select(-`Research article_YJ`) %>% 
+  as.matrix() %>% 
+  Kappa()
+
+print(Ka_res, CI=TRUE)
+```
+
+
+
+```{r}
+# research
+df_aov_K <- df_inc_K %>% 
+  select(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
+  group_by(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
+  summarize(count=n(), .groups="drop") %>% 
+  pivot_wider(names_from=`Use ANOVA_HJ`, values_from = count, values_fill = 0) 
+
+Ka_aov <- df_aov_K %>% 
+  select(-`Use ANOVA_YJ`) %>% 
+  as.matrix() %>% 
+  Kappa()
+
+print(Ka_aov, CI=TRUE)
+```
+
+
+## The first 120 articles
+
+```{r}
+df_anova_YJ <- readxl::read_excel(here::here("data", "Coding_sheet_pilot.xlsx"), 
+                                 sheet="AnalysisInfo_YJ",
+                                 range="A1:AO39") %>% 
+  left_join(df_meta, by="Paper ID") %>% 
+  select(-Title) 
+
+df_anova_HJ <- readxl::read_excel(here::here("data", "Coding_sheet_pilot.xlsx"), 
+                                 sheet="AnalysisInfo_HJ",
+                                 range="A1:AO39") %>% 
+  left_join(df_meta, by="Paper ID") %>% 
+  select(-Title) 
+```
+
+
+
+```{r}
+design_list <- c("N_factor", "max_No_levels")
+
+kappa_0 <- lapply(design_list, thekappa, df1=df_anova_YJ, df2=df_anova_HJ, isweighted=TRUE) %>% 
+  bind_rows()
+```
+
+```{r}
+con_a_list <- c("a1_report_all", "a3_correction")
+
+kappa_a <- lapply(con_a_list, thekappa, 
+                  df1=filter(df_anova_YJ, a2_multiway==1), 
+                  df2=filter(df_anova_HJ, a2_multiway==1)) %>% 
+  bind_rows()
+```
+
+```{r}
+con_b_wlist <- c("b1_N_factor3+", "b2_N_significant_b1")
+con_b_ulist <- c("b7_posthoc", "b8_correction")
+
+kappa_bw <- lapply(con_b_wlist, thekappa, isweighted=TRUE,
+                   df1=filter(df_anova_YJ, max_No_levels>2), 
+                   df2=filter(df_anova_HJ, max_No_levels>2)) %>% 
+  bind_rows()
+
+kappa_bu <- lapply(con_b_ulist, thekappa, 
+                   df1=filter(df_anova_YJ, max_No_levels>2), 
+                   df2=filter(df_anova_HJ, max_No_levels>2)) %>% 
+  bind_rows()
+kappa_b <- bind_rows(kappa_bw, kappa_bu)
+```
+
+```{r}
+con_c_wlist <- c("c1_N_2way_inter", "c2_N_sig_in_c1")
+con_c_ulist <- c("c7_simple_effect", "c8_correction")
+
+kappa_cw <- lapply(con_c_wlist, thekappa, isweighted=TRUE,
+                   df1=filter(df_anova_YJ, N_factor>1), 
+                   df2=filter(df_anova_HJ, N_factor>1)) %>% 
+  bind_rows()
+
+kappa_cu <- lapply(con_c_ulist, thekappa, 
+                   df1=filter(df_anova_YJ, N_factor>1), 
+                   df2=filter(df_anova_HJ, N_factor>1)) %>% 
+  bind_rows()
+kappa_c <- bind_rows(kappa_cw, kappa_cu)
+```
+
+```{r}
+kappa_d1e1 <- thekappa(df1=filter(df_anova_YJ, N_factor>2), 
+                    df2=filter(df_anova_HJ, N_factor>2),
+                    colname="d1_e1_highest_sig")
+# kappa_d <- thekappa(df1=filter(df_anova_YJ, N_factor>2, d1_e1_highest_sig==1), 
+#                     df2=filter(df_anova_HJ, N_factor>2, d1_e1_highest_sig==1),
+#                     colname="d1_separate")
+kappa_e <- thekappa(df1=filter(df_anova_YJ, N_factor>2, d1_e1_highest_sig==0), 
+                    df2=filter(df_anova_HJ, N_factor>2, d1_e1_highest_sig==0),
+                    colname="e1_combine")
+
+# kappa_de <- bind_rows(kappa_d1e1, kappa_d, kappa_e)
+kappa_de <- bind_rows(kappa_d1e1, kappa_e)
+```
+
+```{r}
+kappa_df <- bind_rows(kappa_0, kappa_a, kappa_b, kappa_c, kappa_de)  
+
+mean(kappa_df$value)
+```
+
+# ANOVA prevalence
+
+```{r}
+
+df_include <- readxl::read_excel(here::here("data", "Coding_sheet_pilot.xlsx"), 
+                                 sheet="ResearchPaper",
+                                 range="A1:L13") %>% 
+  left_join(df_publ, by="Paper ID") %>%
+  select(-Title)
+
+
+
+```
+
+```{r}
+# df_article <- readxl::read_excel(here::here("data", "Coding_sheet_ANOVA.xlsx"), 
+#                                  sheet="ArticleMeta",
+#                                  range="A1:M750") %>% 
+#   select("Paper ID", "Publication Title")
+# 
+# df_include <- readxl::read_excel(here::here("data", "Coding_sheet_ANOVA.xlsx"), 
+#                                  sheet="ResearchArticle",
+#                                  range="A1:F750") %>% 
+#   left_join(df_article, by="Paper ID") %>% 
+#   select(`Publication Title`, Title_Prescreening, `Research article`, `Use ANOVA`, Included) 
+# 
+# df_anova <- readxl::read_excel(here::here("data", "Coding_sheet_ANOVA.xlsx"), 
+#                                  sheet="AnalysisInfo",
+#                                  range="A1:AC750") %>% # to be updated
+#   left_join(df_article, by="Paper ID") %>% 
+#   select(-Title) 
+```
+
+```{r}
+df_anova$`Paper ID` %>% 
+  unique() %>% 
+  length()
+```
+
+## Article information
+
+### Title pre-screening
+```{r}
+sprintf('Number of articles excluded via title pre-screening: %d \nThe number of remaining articles: %d', 
+        sum(df_include$Title_Prescreening),
+        sum(1-df_include$Title_Prescreening)) %>% 
+  writeLines()
+```
+
+```{r}
+df_include %>% 
+  select(`Publication Title`, Title_Prescreening) %>% 
+  group_by(`Publication Title`) %>% 
+  summarize(N_titleIncluded = sum(1-Title_Prescreening),
+            N_total = n()) %>% 
+  add_row(`Publication Title`="Sum", 
+          N_titleIncluded=sum(.$N_titleIncluded),
+          N_total=sum(.$N_total)) %>% 
+  mutate(Percentage = N_titleIncluded/N_total)
+```
+
+### Research articles
+
+```{r}
+sprintf('Number of research articles included: %d (excluded: %d)', 
+        sum(df_include$`Research article`),
+        sum(1-df_include$Title_Prescreening)-sum(df_include$`Research article`)) 
+```
+
+```{r}
+df_include %>% 
+  select(`Publication Title`, Title_Prescreening, `Research article`) %>% 
+  group_by(`Publication Title`) %>% 
+  summarize(N_titleIncluded = sum(1-Title_Prescreening),
+            N_research = sum(`Research article`),
+            N_total = n()) %>% 
+  add_row(`Publication Title`="Sum", 
+          N_research=sum(.$N_research),
+          N_titleIncluded=sum(.$N_titleIncluded),
+          N_total=sum(.$N_total))
+```
+
+### ANOVA prevalence
+```{r}
+sprintf('Number of research articles employing ANOVA: %d', 
+        sum(df_include$`Use ANOVA`))
+
+sprintf('The percentage of articles employing ANOVA among all research articles: %d%%', 
+        sum(df_include$`Use ANOVA`)/sum(df_include$`Research article`)*100)
+```
+
+
+```{r}
+df_include %>% 
+  group_by(`Publication Title`) %>% 
+  select(-`Title_Prescreening`) %>% 
+  summarize(N_research = sum(`Research article`),
+            N_ANOVA = sum(`Use ANOVA`),
+            N_included = sum(Included),
+            N_total = n()) %>% 
+  add_row(`Publication Title`="Sum", 
+          N_research=sum(.$N_research),
+          N_ANOVA =sum(.$N_ANOVA),
+          N_included=sum(.$N_included),
+          N_total=sum(.$N_total)) %>% 
+  mutate(Percentage_ANOVA = N_ANOVA/N_research)
+```
+
+### ANOVA complexity
+
+```{r}
+df_design <- df_anova %>% 
+  filter(included==TRUE) %>% 
+  mutate(Design_int = str_split(Design, "_"),
+         Avg_No_levels = sapply(Design_int, function(x){mean(as.numeric(x))}),
+         Complexity = sapply(Design_int, function(x){prod(as.numeric(x))}))
+```
+
+#### Average per article
+
+ANOVA designs per article
+```{r}
+df_design_article <- df_design %>% 
+  group_by(`Paper ID`, `Publication Title`) %>% 
+  summarize(included = all(included),
+            Complexity = max(Complexity),
+            Design = unique(Design),
+            N_factor = max(N_factor),
+            max_levels = max(max_No_levels),
+            .groups = "drop")
+
+df_design_article %>% 
+  group_by(Design) %>% 
+  summarize(Count = n()) %>% 
+  add_row(Design = "Sum", Count = sum(.$Count))
+```
+
+```{r}
+df_design_article %>% 
+  group_by(Design, `Publication Title`) %>% 
+  summarize(Count = n(),
+            .groups = "drop") %>% 
+  pivot_wider(names_from = Design, values_from = Count,
+              values_fill = 0)
+```
+
+#### Average per ANOVA
+
+Note: one article may have multiple experiments and, therefore, multiple ANOVAs.
+
+```{r}
+sprintf('The average number of factors across ANOVAs: %f', 
+        mean(df_design$N_factor))
+
+sprintf('The average number of factor levels across ANOVAs: %f', 
+        mean(df_design$Avg_No_levels))
+```
+
+Specifically, the 
+```{r}
+df_design %>% 
+  group_by(Design) %>% 
+  summarize(Count = n()) %>% 
+  add_row(Design = "Sum", Count = sum(.$Count)) %>% 
+  rowwise() %>% 
+  mutate(Percentage = Count/nrow(df_design))
+```
+
+
+```{r}
+df_design %>% 
+  group_by(Design, `Publication Title`) %>% 
+  summarize(Count = n(), .groups="drop") %>% 
+  pivot_wider(names_from = Design, values_from = Count,
+              values_fill = 0)
+```
+
+## ANOVA convention prevalence
+
+```{r}
+df_anova
+```
+
+
+```{r}
+# df_anova_study <- 
+  df_anova %>% 
+  filter(included==TRUE) %>% 
+  group_by(`Paper ID`, `Publication Title`) %>% 
+  summarize(included = all(included),
+            Design = unique(Design),
+            Convention_A = any(Convention_A==1),
+            Convention_B = any(Convention_B==1),
+            Convention_C = any(Convention_C==1),
+            Convention_D = any(Convention_D==1),
+            Convention_E = any(Convention_E==1),
+            .groups = "drop")
+```
+
+
+### Convention A: inspect all
+Convention A: Inspect all effects (at least significant main effects and interaction) in a multi-way ANOVA (i.e., ANOVA with more than one factor).
+
+#### Per ANOVA
+
+```{r}
+df_design %>% 
+  filter(N_factor > 1) %>% # multi-way ANOVA
+  summarize(A1_avg = mean(A1_report_all))
+```
+
+
+#### Per article
+
+
+### Convention B: post-hoc
+
+
+
+
+### Convention C: simple effect analysis
+
+
+
+
+### Convention D: separate 
+
+
+
+
+### Convention E: combine 
+
+
+
+
+
 
 # Simulating Type I error in ANOVA
 
