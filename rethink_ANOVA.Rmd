@@ -9,6 +9,7 @@ output:
     toc: true
     toc_depth: 4
     toc_float: true
+    df_print: paged
 ---
 
 <style>
@@ -37,14 +38,10 @@ theme_set(theme_apa())
 
 # set global chunk options, put figures into folder
 options(warn=-1, replace.assign=TRUE)
-# knitr::opts_chunk$set(
-#   fig.align = "center",
-#   fig.show = "hold"
-# )
 knitr::opts_chunk$set(
   echo = TRUE, warning = FALSE, message = FALSE, 
-  include = TRUE, cache = FALSE, tidy = FALSE, 
-  size = "big", fig.width=8, fig.asp=0.7, fig.path = "figures/figure-",
+  include = TRUE, tidy = FALSE, archive = FALSE,
+  size = "big", fig.width=8, fig.asp=0.7, 
   width = 1800,
   emmeans=list(msg.interaction=FALSE))
 
@@ -250,14 +247,14 @@ kappa_de <- bind_rows(kappa_d1e1, kappa_e)
 ```
 
 ```{r}
-(kappa_df <- bind_rows(kappa_0, kappa_a, kappa_b, kappa_c, kappa_de))  
+(kappa_df <- bind_rows(kappa_0, kappa_a, kappa_b, kappa_c, kappa_de))
 ```
 
 ```{r}
 # the mean consistency
 tibble(mean = mean(kappa_df$value),
        min = min(kappa_df$value),
-       max = max(kappa_df$value))
+       max = max(kappa_df$value)) 
 ```
 
 # ANOVA prevalence
@@ -325,7 +322,6 @@ df_complex <- df_conv %>%
 ```
 
 Across ANOVAs:
-
 ```{r}
 df_complex %>% 
   group_by(journal) %>% 
@@ -337,7 +333,7 @@ df_complex %>%
               journal = "All",
               mean_N_factor = mean(N_factor),
               mean_max_N_levels = mean(max_No_levels),
-              mean_complexity = mean(Complexity)))
+              mean_complexity = mean(Complexity))) 
 ```
 
 ```{r}
@@ -349,38 +345,159 @@ plot_design <- df_complex %>%
 plot_design
 ```
 
-
-
-
+alluvial figure (?) [left side is the experimental designs and the right side is the numbers of conditions.]
+```{r}
+df_complex %>% 
+  select(Design, Complexity) %>% 
+  group_by(Design, Complexity) %>% 
+  summarize(count = n(), .groups="drop") 
+```
 
 ## ANOVA convention prevalence
 
-
-
 ### Convention A: inspect all
+```{r}
+df_conv_a <- df_conv %>% 
+  filter(a2_multiway==1) %>% 
+  select(`Paper ID`, starts_with("a"), journal)
 
+# percentage of ANOVAs reporting/inspecting all effects among multi-way ANOVA
+df_conv_a_all <- summarize(df_conv_a, 
+                           journal = "All",
+                           conA = mean(a1_report_all))
+
+df_conv_a %>% 
+  group_by(journal) %>% 
+  summarize(conA = mean(a1_report_all)) %>% 
+  add_row(df_conv_a_all) # add summary row
+```
+
+```{r}
+df_conv_a_adjust <- df_conv_a %>% 
+  group_by(a3_correction) %>% 
+  summarize(journal = "All", count = n())
+
+df_conv_a %>% 
+  group_by(journal, a3_correction) %>% 
+  summarize(count = n(), .groups="drop") %>% 
+  add_row(df_conv_a_adjust) 
+```
 
 
 ### Convention B: post-hoc
+```{r}
+df_conv_b <- df_conv %>% 
+  filter(max_No_levels>2) %>% 
+  select(`Paper ID`, max_No_levels, starts_with("b"), journal)
 
+# percentage of (not) performing post-hoc analysis when the main effect is (not) significant
+df_conv_b_artile <- df_conv_b %>% 
+  mutate(isConB = b5_main_effect_sig == b7_posthoc) %>% 
+  group_by(`Paper ID`, journal) %>% 
+  summarize(meanB_art = mean(isConB), .groups="drop")
 
+# show the result
+df_conv_b_all <- df_conv_b_artile %>% 
+  summarize(journal = "All", conB = mean(meanB_art))
+
+df_conv_b_artile %>% 
+  group_by(journal) %>% 
+  summarize(conB = mean(meanB_art)) %>% 
+  add_row(df_conv_b_all) # add summary row
+```
+
+Multiple comparison corrections (per ANOVA)
+```{r}
+df_conv_b_adjust <- df_conv_b %>% 
+  filter(b5_main_effect_sig == 1) %>% 
+  group_by(b8_correction) %>% 
+  summarize(journal = 'All', count = n())
+  
+df_conv_b %>% 
+  filter(b5_main_effect_sig == 1) %>% 
+  group_by(journal, b8_correction) %>% 
+  summarize(count = n(), .groups="drop") %>% 
+  add_row(df_conv_b_adjust) 
+```
 
 
 ### Convention C: simple effect analysis
+```{r}
+df_conv_c <- df_conv %>% 
+  filter(N_factor>1) %>% 
+  select(`Paper ID`, N_factor, starts_with("c") & !starts_with("Con"), journal)
 
+# percentage of (not) performing simple analysis when the interaction is (not) significant
+df_conv_c_artile <- df_conv_c %>% 
+  mutate(isConC = c5_inter_sig == c7_simple_effect) %>% 
+  group_by(`Paper ID`, journal) %>% 
+  summarize(meanC_art = mean(isConC), .groups="drop")
 
+# show the result
+df_conv_c_all <- df_conv_c_artile %>% 
+  summarize(journal = "All", conC = mean(meanC_art))
 
+df_conv_c_artile %>% 
+  group_by(journal) %>% 
+  summarize(conC = mean(meanC_art)) %>% 
+  add_row(df_conv_c_all) # add summary row
+```
+
+Multiple comparison corrections (per ANOVA)
+```{r}
+df_conv_c_adjust <- df_conv_c %>% 
+  filter(c5_inter_sig == 1) %>% 
+  group_by(c8_correction) %>% 
+  summarize(journal = 'All', count = n())
+  
+df_conv_c %>% 
+  filter(c5_inter_sig == 1) %>% 
+  group_by(journal, c8_correction) %>% 
+  summarize(count = n(), .groups="drop") %>% 
+  add_row(df_conv_c_adjust)
+```
 
 ### Convention D: separate 
 
+```{r}
+df_conv_de <- df_conv %>% 
+  filter(N_factor>2) %>% 
+  select(`Paper ID`, N_factor, d1_e1_highest_sig, d1_separate, e1_combine, journal)
 
+# 
+df_conv_d_artile <- df_conv_de %>% 
+  filter(d1_e1_highest_sig == 1) %>% 
+  group_by(`Paper ID`, journal) %>% 
+  summarize(meanD_art = mean(d1_separate), .groups="drop")
 
+# show the result
+df_conv_d_all <- df_conv_d_artile %>% 
+  summarize(journal = "All", conD = mean(meanD_art))
+
+df_conv_d_artile %>% 
+  group_by(journal) %>% 
+  summarize(conD = mean(meanD_art)) %>% 
+  add_row(df_conv_d_all) # add summary row
+```
 
 ### Convention E: combine 
 
+```{r}
+# 
+df_conv_e_artile <- df_conv_de %>% 
+  filter(d1_e1_highest_sig == 0) %>% 
+  group_by(`Paper ID`, journal) %>% 
+  summarize(meanE_art = mean(e1_combine), .groups="drop")
 
+# show the result
+df_conv_e_all <- df_conv_e_artile %>% 
+  summarize(journal = "All", conE = mean(meanE_art))
 
-
+df_conv_e_artile %>% 
+  group_by(journal) %>% 
+  summarize(conE = mean(meanE_art)) %>% 
+  add_row(df_conv_e_all) # add summary row
+```
 
 
 # Simulating Type I error in ANOVA
@@ -415,7 +532,7 @@ dfs_sig_omni %>%
   select(-c(N_sig, p.value)) %>% 
   group_by(N_IV, effnames) %>% 
   summarize(TypeI_with_omni = mean(sig_with_omni), .groups = "drop") %>% 
-  pivot_wider(names_from = effnames, values_from = TypeI_with_omni)
+  pivot_wider(names_from = effnames, values_from = TypeI_with_omni) 
 ```
 
 
@@ -446,7 +563,7 @@ Claim significant results only when both the main effect and at least one of the
 ```{r}
 df_TypeI_posthoc %>% 
   filter(adjust != "none") %>% # only when using multiple comparison correction
-  select(-TypeI_postonly)
+  select(-TypeI_postonly) 
 ```
 
 Claim significant results only when the main effect and at least one of the post-hoc tests (without different multiple comparison corrections) are significant:
@@ -473,7 +590,7 @@ p_inter_simple <- sim_inter_simple(N_subj = 30, iter = Nsim, n_core=16,
 ```{r}
 p_inter_simple %>% 
   group_by(adjust) %>% 
-  summarize(mean(p_mainA<0.05), mean(p_mainB<0.05), mean(p_inter<0.05))
+  summarize(mean(p_mainA<0.05), mean(p_mainB<0.05), mean(p_inter<0.05)) 
 ```
 
 When both the interaction and at least one of the (four) simple effects were significant:
@@ -495,12 +612,12 @@ df_TypeI_inter <- sig_inter_simple(p_inter_simple, 0.05) %>%
             .groups = "drop")
 
 df_TypeI_inter %>% 
-  filter(adjust != "none")
+  filter(adjust != "none") 
 ```
 
 ```{r}
 df_TypeI_inter %>% 
-  filter(adjust == "none")
+  filter(adjust == "none") 
 ```
 
 
