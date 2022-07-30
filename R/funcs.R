@@ -1,7 +1,7 @@
 
 ##### Omnibus ANOVA #####
 sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
-                         N_IV = 2, seed = 2022){
+                        N_IV = 2, seed = 2022){
   # N_subj: number of participants per condition (between-subject design)
   # iter: number of simulation/iteration
   # n_core: number of cores to be used for simulation
@@ -24,7 +24,7 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
     
     df_IV_subj <- do.call("rbind", replicate(N_subj, df_IV, simplify = FALSE))
     
-    # simulate data
+    # simulate null data
     df_omni_sim <- df_IV_subj %>% 
       mutate(Subj = 1:n(),
              DV = rnorm(n())) %>% 
@@ -118,14 +118,14 @@ sig_omnibus <- function(df_simu_p, alphas=0.05){
 ##### Main effect and post-hoc analysis #####
 # Simulation for Type I error in main effect and post-hoc analysis
 sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
-                              N_con = 3, seed = 2022,
+                              N_levels = 3, seed = 2022,
                               adjusts = c("none", "tukey", "scheffe", "sidak", "bonferroni", "dunnettx")
 ) {
   # N_subj: number of participants per condition (between-subject design)
   # iter: number of simulation/iteration
   # n_core: number of cores to be used for simulation
   # file_cache: file name of the cache file. If NULL, no file will be cached.
-  # N_con: number of conditions for the one-way ANOVA
+  # N_levels: number of conditions for the one-way ANOVA
   # seed: seed used for simulation
   # adjusts: methods to be used in emmeans() to apply multiple comparison corrections
   
@@ -136,13 +136,13 @@ sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
   set.seed(seed)
   
   # function to perform a single simulation
-  sim_posthoc_single <- function(N_subj, N_con, adjusts) {
+  sim_posthoc_single <- function(N_subj, N_level, adjusts) {
     
     # simulate data
     df_main_sim <- tibble(
-      IV = rep(as.character(1:N_con), each=N_subj),
-      DV = rnorm(N_subj * N_con),
-      Subj = 1:(N_subj * N_con)
+      IV = rep(as.character(1:N_level), each=N_subj),
+      DV = rnorm(N_subj * N_level),
+      Subj = 1:(N_subj * N_level)
     )
     
     # perform ANOVA
@@ -164,14 +164,14 @@ sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
       
       df_contra_sim <- as_tibble(contra_sim) %>% 
         select(contrast, p.value) %>% 
-        pivot_wider(names_from = contrast, names_prefix = "p_", values_from = p.value) %>% 
         mutate(adjust = adjusts[iadjust],
-               p_main = p_main)
+               p_main = p_main,
+               N_level = N_level)
       
       df_list[[iadjust]] = df_contra_sim
     }
     
-    one_main_posthoc <- bind_rows(df_list)
+    one_main_posthoc <- bind_rows(df_list) 
     
     return(one_main_posthoc)
   }
@@ -183,10 +183,14 @@ sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
     
   } else {
     # set parallel processing
-    Ns_iter <- rep(N_subj, times=iter)
+    Ns_iter <- rep(N_levels, times=iter)
     ls_tibble <- pbapply::pblapply(Ns_iter, sim_posthoc_single,  
-                                   N_con=N_con, adjusts=adjusts, cl=n_core)
-    df_simu <- bind_rows(ls_tibble, .id = "iter")
+                                   N_subj=N_subj, adjusts=adjusts, cl=n_core)
+    df_simu <- bind_rows(ls_tibble, .id = "iter") %>% 
+      mutate(iter = as_factor(iter),
+             contrast = as_factor(contrast),
+             adjust = if_else(adjust=="none", "uncorrected", adjust),
+             adjust = as_factor(adjust))
     
     if (!is.null(file_cache)){
       write_rds(df_simu, file=file_cache)
@@ -205,20 +209,21 @@ sig_main_posthoc <- function(df_simu_p, alphas=0.05) {
   sig_main_posthoc_single <- function(df_simu_p, thealpha){
     
     df_simu_sig_long <- df_simu_p %>% 
-      pivot_longer(contains(" - "), names_to = "contrast", values_to = "p.value") %>% 
       mutate(sig = p.value < thealpha,
              sig_main = p_main < thealpha,
              alpha = thealpha,
              contrast = str_remove(contrast, "p_")) 
     
     df_sim_sig_any <- df_simu_sig_long %>% 
-      group_by(iter, adjust, alpha) %>% 
+      group_by(N_level, iter, adjust, alpha) %>% 
       summarize(N_sigpost = sum(sig), .groups = "drop") 
     
     df_simu_sig <- df_simu_sig_long  %>% 
-      pivot_wider(id_cols = c(iter, adjust, alpha, sig_main), names_from = contrast, 
-                  names_prefix = "sig_", values_from = sig) %>% 
-      left_join(df_sim_sig_any, by=c("iter", "adjust", "alpha"))
+      pivot_wider(id_cols = c(N_level, iter, adjust, alpha, sig_main), 
+                  names_from = contrast, 
+                  names_prefix = "sig_", 
+                  values_from = sig) %>% 
+      left_join(df_sim_sig_any, by=c("N_level", "iter", "adjust", "alpha"))
     
     return(df_simu_sig) 
   }
@@ -231,7 +236,7 @@ sig_main_posthoc <- function(df_simu_p, alphas=0.05) {
 
 
 ##### Interaction and simple effect analysis #####
-# Simulation for Type I error in main effect and post-hoc analysis
+# Simulation for Type I error in interaction and simple effect analysis
 sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
                               seed = 2022,
                               adjusts = c("none", "scheffe", "sidak", "bonferroni", "dunnettx")
@@ -288,40 +293,39 @@ sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
     
     for (iadjust in 1:N_adjust) {
       
+      # a group of two
       tmp_simple_AB_adjust <- summary(tmp_simple_AB[1:2], adjust = adjusts[iadjust])
+      # a group of two
       tmp_simple_BA_adjust <- summary(tmp_simple_BA[1:2], adjust = adjusts[iadjust])
       
+      # a group of 4 tests
       tmp_simple_all_adjust <- summary(tmp_simple_all[c(1:2,5:6)], adjust = adjusts[iadjust])
       
       p_simpleAB <- as_tibble(tmp_simple_AB_adjust) %>% 
         mutate(contrast = paste0(IV_B, "_(", contrast, ")")) %>% 
         select(contrast, p.value) %>% 
-        pivot_wider(names_from = contrast, names_prefix = "p_", values_from = p.value) %>% 
-        mutate(adjust = adjusts[iadjust])
+        mutate(adjust = adjusts[iadjust],
+               group = "byB_2")
       df_listAB[[iadjust]] = p_simpleAB
       
       p_simpleBA <- as_tibble(tmp_simple_BA_adjust) %>% 
         mutate(contrast = paste0(IV_A, "_(", contrast, ")")) %>% 
         select(contrast, p.value) %>% 
-        pivot_wider(names_from = contrast, names_prefix = "p_", values_from = p.value) %>% 
-        mutate(adjust = adjusts[iadjust])
+        mutate(adjust = adjusts[iadjust],
+               group = "byA_2")
       df_listBA[[iadjust]] = p_simpleBA
       
       p_simpleall <- as_tibble(tmp_simple_all_adjust) %>% 
         select(contrast, p.value) %>% 
-        pivot_wider(names_from = contrast, names_prefix = "p_", values_from = p.value) %>% 
-        mutate(adjust = adjusts[iadjust])
+        mutate(adjust = adjusts[iadjust],
+               group = "byAB_4")
       df_listall[[iadjust]] = p_simpleall
     }
     
     # save all the p-values
-    one_inter_simple <- left_join(bind_rows(df_listAB),
-                                  bind_rows(df_listBA)) %>% 
-      left_join(bind_rows(df_listall)) %>% 
-      mutate(N = N_subj,
-             p_inter = p_inter,
-             p_mainA = p_mainA,
-             p_mainB = p_mainB)
+    one_inter_simple <- bind_rows(df_listAB, df_listBA, df_listall) %>% 
+      mutate(N = N_subj, p_inter = p_inter,
+             p_mainA, p_mainB) # add other information
     
     return(one_inter_simple)
   }
@@ -337,7 +341,12 @@ sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
     Ns_iter <- rep(N_subj, times=iter)
     ls_tibble <- pbapply::pblapply(Ns_iter, simu_simple_single,  
                                    adjusts=adjusts, cl=n_core)
-    df_simu <- bind_rows(ls_tibble, .id = "iter")
+    df_simu <- bind_rows(ls_tibble, .id = "iter") %>% 
+      mutate(iter = as_factor(iter),
+             contrast = as_factor(contrast),
+             group = as_factor(group),
+             adjust = if_else(adjust=="none", "uncorrected", adjust),
+             adjust = as_factor(adjust))
     
     if (!is.null(file_cache)){
       write_rds(df_simu, file=file_cache)
@@ -353,43 +362,31 @@ sig_inter_simple <- function(df_simu_p, alphas=0.05) {
   # alphas: alpha to be applied for claiming significant results
   
   # apply one alpha
-  sig_main_posthoc_single <- function(df_simu_p, thealpha){
+  sig_inter_simple_single <- function(df_simu_p, thealpha){
     
     df_simu_sig_long <- df_simu_p %>% 
-      pivot_longer(contains(" - "), names_to = "contrast", values_to = "p.value") %>% 
-      mutate(sig = p.value < thealpha,
-             sig_inter = p_inter < thealpha,
+      mutate(sig_inter = p_inter < thealpha,
+             sig_simple = p.value < thealpha,
              alpha = thealpha,
              contrast = str_remove(contrast, "p_")) 
     
-    # whether any of the four simple effects are significant 
-    # (when the multiple comparison corrections are applied for the four comparisons)
-    df_sim_sig_4any <- df_simu_sig_long %>% 
-      filter(substr(contrast, 3,3) != "_") %>% 
-      group_by(iter, adjust, alpha) %>% 
-      summarize(N_sigsimple4 = sum(sig), .groups = "drop") 
-    
-    # whether either simple effect is significant (corrected with two)
-    df_sim_sig_2any <- df_simu_sig_long %>% 
-      filter(substr(contrast, 3,3) == "_") %>% 
-      mutate(IV_by = toupper(substr(contrast, 1, 1))) %>% 
-      # separate(contrast, into = c("IV_by", "contrast"), sep = "_") %>% 
-      group_by(iter, IV_by, adjust, alpha) %>% 
-      summarize(N_sigsimple2 = sum(sig), .groups = "drop") %>% 
-      pivot_wider(c(iter, adjust, alpha), names_from = IV_by, names_prefix = "N_sigsimple2by",
-                  values_from = N_sigsimple2)
+    # whether any of the four/two simple effects are significant 
+    # (when the multiple comparison corrections are applied for the four/two comparisons)
+    df_sim_sig_any <- df_simu_sig_long %>% 
+      group_by(group, iter, adjust, alpha) %>% 
+      summarize(sig_any_simple = sum(sig_simple)>0, .groups = "drop")
     
     df_simu_sig <- df_simu_sig_long  %>% 
-      pivot_wider(id_cols = c(iter, adjust, alpha, sig_inter), names_from = contrast, 
-                  names_prefix = "sig_", values_from = sig) %>% 
-      left_join(df_sim_sig_4any, by=c("iter", "adjust", "alpha")) %>% 
-      left_join(df_sim_sig_2any, by=c("iter", "adjust", "alpha"))
+      select(iter, adjust, group, alpha, N, sig_inter) %>% 
+      distinct() %>% 
+      right_join(df_sim_sig_any, by=c("iter", "adjust", "group", "alpha")) %>% 
+      mutate(`sig_inter&any` = sig_inter & sig_any_simple)
     
     return(df_simu_sig) 
   }
   
   # combine results with multiple alphas
-  ltmp <- lapply(alphas, sig_main_posthoc_single, df_simu_p=df_simu_p)
+  ltmp <- lapply(alphas, sig_inter_simple_single, df_simu_p=df_simu_p)
   
   return(bind_rows(ltmp))
 }
