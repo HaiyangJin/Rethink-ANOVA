@@ -52,12 +52,13 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
     F_omni <- sumsq_IV/dfn_IV/(sumsq_re/dfn_re)
     p_omni <- pf(F_omni, dfn_IV, dfn_re, lower.tail = F)
     
-    p.value <- c(aov_omni$Anova$`Pr(>F)`[c(-1, -length(aov_omni$Anova$`Pr(>F)`))], p_omni)
-    effnames <- c(row.names(aov_omni$Anova)[c(-1, -length(aov_omni$Anova$`Pr(>F)`))], "omniF") 
+    p.value <- aov_omni$Anova$`Pr(>F)`[c(-1, -length(aov_omni$Anova$`Pr(>F)`))]
+    effnames <- row.names(aov_omni$Anova)[c(-1, -length(aov_omni$Anova$`Pr(>F)`))]
     
     p_df <- tibble(effnames = effnames,
                    p.value = p.value) %>% 
-      mutate(N_IV = N_IV)
+      mutate(N_IV = N_IV,
+             omniF = p_omni)
     
     return(p_df)
   }
@@ -81,38 +82,58 @@ sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
   return(df_simu)
 }
 
-sig_omnibus <- function(df_simu_p, alphas=0.05){
+sig_omnibus <- function(df_simu_p, alphas=0.05, isBonferroni=TRUE){
   
-  sig_omnibus_single <- function(df_simu_p, thealpha){
+  sig_omnibus_single <- function(df_simu_p, thealpha, bonf){
+    
+    corr_str <- c("uncorrected", "Bonferroni")
+    
+    tmp_end <- max(df_simu_p$N_IV)
+    if (bonf) {
+      tmp_x <- 1
+      num_effects <- c()
+      for (i in 1:tmp_end) { 
+        # 杨辉三角 (aka Pascal's triangle)
+        tmp_x <- c(0, tmp_x) + c(tmp_x, 0)
+        num_effects[i] <- sum(tmp_x[2:length(tmp_x)])
+      }
+      
+    } else {
+      num_effects <- rep(1, times=tmp_end)
+    }
     
     df_simu_sig_long <- df_simu_p %>% 
-      mutate(sig = p.value < thealpha,
-             alpha = thealpha)
-    
-    df_simu_sig_omni <- df_simu_sig_long %>% 
-      filter(effnames != "omniF") %>% 
-      group_by(iter, N_IV, alpha) %>% 
-      summarize(N_sig = sum(sig), 
-                effnames = "sig_any",
-                alpha = thealpha,
-                sig = N_sig > 0, .groups="drop") %>% 
-      bind_rows(df_simu_sig_long)
+      mutate(p.value = pmin(p.value * num_effects[N_IV], 1), # cap to 1
+             sig = p.value < thealpha,
+             sig_omniF = omniF < thealpha,
+             alpha = thealpha,
+             adjust = corr_str[bonf+1])
     
     df_simu_sig <- df_simu_sig_long %>% 
-      filter(effnames == "omniF") %>% 
-      select(-p.value) %>% 
-      pivot_wider(names_from = effnames, values_from = sig) %>% 
-      right_join(df_simu_sig_omni, by=c("iter", "N_IV", "alpha")) %>% 
-      # filter(effnames != "omniF") %>% 
-      mutate(sig_with_omni = omniF * sig)
+      group_by(iter, N_IV, alpha) %>% 
+      summarize(N_sig = sum(sig), 
+                alpha = thealpha,
+                sig_any = N_sig > 0, .groups="drop") %>% 
+      left_join(df_simu_sig_long, by = c("iter", "N_IV", "alpha")) %>% 
+      mutate(sig_with_omni = sig_omniF & sig_any)
     
     return(df_simu_sig)
   }
   
-  # combine results with multiple alphas
-  ltmp <- lapply(alphas, sig_omnibus_single, df_simu_p=df_simu_p)
+  # combine results with multiple alphas (without Bonferroni)
+  ltmp <- lapply(alphas, sig_omnibus_single, 
+                 df_simu_p=df_simu_p, bonf = FALSE)
   
-  return(bind_rows(ltmp))
+  if (isBonferroni) {
+    ltmpb <- lapply(alphas, sig_omnibus_single, 
+                   df_simu_p=df_simu_p, bonf = TRUE)
+    
+    df_sig_omni <- bind_rows(ltmp, ltmpb)
+  } else {
+    df_sig_omni <- bind_rows(ltmp)
+  }
+  
+  return(df_sig_omni)
 }
 
 ##### Main effect and post-hoc analysis #####

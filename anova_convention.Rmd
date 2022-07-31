@@ -521,18 +521,59 @@ p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16,
                       N_IV = 2:5)
 ```
 
-Type I error rates when not taking into account omnibus F-test:
+### FWER and CER
+
 ```{r}
-dfs_sig_omni <- sig_omnibus(p_omni, 0.05) 
+df_TypeI_omni <- sig_omnibus(p_omni, 0.05)  %>% 
+  select(-c(alpha, N_sig, effnames, p.value, sig, omniF)) %>% 
+  distinct() %>% 
+  group_by(N_IV, adjust) %>% 
+  summarize(TypeI_omniF = mean(sig_omniF), 
+            TypeI_any = mean(sig_any),
+            `TypeI_omniF&any` = mean(sig_with_omni),
+            .groups = "drop") 
 
-df_wo_omni <- dfs_sig_omni %>% 
-  select(-c(N_sig, p.value)) %>% 
-  group_by(N_IV, effnames) %>% 
-  summarize(TypeI = mean(sig), .groups = "drop") %>% 
-  mutate(omni = FALSE)
+df_TypeI_omni
+```
 
-df_wo_omni %>% 
-  pivot_wider(names_from = effnames, values_from = TypeI)
+```{r fig.width=4, fig.asp=1.2}
+
+df_omni_cber <- df_TypeI_cber %>% 
+  filter(N_IV == 2) %>% 
+  pivot_longer(starts_with("TypeI_"), names_to = "effnames", values_to = "TypeI") %>% 
+  mutate(adjust = if_else(effnames == "TypeI_omniF", "uncorrected", adjust),
+         adjust = fct_relevel(adjust, "uncorrected"),
+         effnames = factor(effnames, 
+                           levels = c("TypeI_omniF", "TypeI_any", "TypeI_omniF&any")),
+         effnames = fct_recode(effnames, `omnibus\nF-test` = "TypeI_omniF", 
+                              `Inspect all\n(FWER)`= "TypeI_any", 
+                              `omnibus & all\n(CER)`="TypeI_omniF&any")) %>% 
+  distinct() 
+
+fig_simu_a <- df_omni_tmp %>% 
+  ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+  geom_col(width=1) +   
+  facet_grid(cols=vars(effnames), scales="free_x", space="free_x", switch="x")+
+  ggh4x::facetted_pos_scales(
+    list(
+      scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 1.5, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 1.5, expand = c(0, 0.65))
+    )) + 
+  scale_fill_manual(values = custom_clr[c(1,5)],
+                    breaks = levels(df_omni_tmp$adjust)) + #,  
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
+  labs(y = "Type I Error Rate (%)", fill = "") +
+  theme(legend.position = c(0.75, 0.6),
+        axis.ticks.length = unit(.15, "cm"),
+        axis.text.x = element_blank(),
+        panel.spacing.x = unit(0, "pt"),
+        strip.placement = "outside",
+        axis.title.x = element_blank())
+  
+# ggsave(file.path("images","simu_mainpost.png"), fig_simu_a, width = 8, height = 5.6)
+fig_simu_a
 ```
 
 Type I error rates when taking into account omnibus F-test:
@@ -549,7 +590,7 @@ df_w_omni %>%
 
 ### Figure
 ```{r fig.width=8, fig.asp=0.6}
-fig_simu_a <- bind_rows(df_wo_omni, df_w_omni) %>% 
+fig_simu_a_supp <- bind_rows(df_wo_omni, df_w_omni) %>% 
   filter(effnames %in% c("A", "sig_any")) %>% 
   mutate(effnames = fct_recode(effnames, `A single effect` = "A", `FWER` = "sig_any"),
          omni = as_factor(omni),
@@ -568,9 +609,8 @@ fig_simu_a <- bind_rows(df_wo_omni, df_w_omni) %>%
         axis.title.x = element_text(margin = margin(t = 0)))
 
 # ggsave(file.path("images","simu_omnibus.png"), fig_simu_a, width = 8, height = 4.8)
-fig_simu_a
+fig_simu_a_supp
 ```
-
 
 ## Main effect and post-hoc analysis
 One-way ANOVA with four levels
@@ -631,8 +671,8 @@ df_posthoc_tmp <- df_TypeI_posthoc %>%
          effects = factor(effects, 
                           levels = c("TypeI_main", "TypeI_postonly", "TypeI_both")),
          effects = fct_recode(effects, `Main effect\n` ="TypeI_main", 
-                              `Post-hoc analysis\n(six pairwise comparisons)`="TypeI_postonly", 
-                              `Conjunction Type I Error Rate (CER)\n(main effect & pairwise comparisons)`="TypeI_both")) %>% 
+                              `Post-hoc analysis\n(six tests, FWER)`="TypeI_postonly", 
+                              `Main effect & Post-hoc analysis\nwith six tests (CER)`="TypeI_both")) %>% 
   distinct() 
 
 fig_simu_b <- df_posthoc_tmp %>% 
@@ -650,7 +690,7 @@ fig_simu_b <- df_posthoc_tmp %>%
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
   labs(y = "Type I Error Rate (%)", fill = "") +
-  theme(legend.position = c(0.75, 0.6),
+  theme(legend.position = c(0.74, 0.6),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
         panel.spacing.x = unit(0, "pt"),
@@ -779,10 +819,10 @@ df_inter_simp_tmp <- df_TypeI_inter %>%
                                      "any_simple_byA_2", "any_simple_byAB_4",
                                      "inter&any_byA_2", "inter&any_byAB_4")),
          effects = fct_recode(effects, 
-                              `Simple effect analysis\n(two pairwise comparisons)`= "any_simple_byA_2", 
-                              `Simple effect analysis\n(four pairwise comparisons)`="any_simple_byAB_4",
-                              `Conjunction Type I Error Rate\n(interaction & two comparisons)`="inter&any_byA_2",
-                              `Conjunction Type I Error Rate\n(interaction & four comparisons)`= "inter&any_byAB_4"))
+                              `Simple effect analysis\n(two tests, FWER)`= "any_simple_byA_2", 
+                              `Simple effect analysis\n(four tests, FWER)`="any_simple_byAB_4",
+                              `Interaction & simple effects\nwith two tests (CER)`="inter&any_byA_2",
+                              `Interaction & simple effects\nwith four tests (CER)`= "inter&any_byAB_4"))
 
 fig_simu_c <- df_inter_simp_tmp %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
@@ -801,7 +841,7 @@ fig_simu_c <- df_inter_simp_tmp %>%
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 18), expand = c(0, 0)) +
   labs(y = "Type I Error Rate (%)", fill = "") +
-  theme(legend.position = c(0.86, 0.6),
+  theme(legend.position = c(0.84, 0.65),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
         panel.spacing.x = unit(0, "pt"),
@@ -1069,7 +1109,7 @@ Results show that the average training performance increases are statistically h
 ```{r fig.width=10.5, fig.asp=0.7}
 fig_simu <- ggarrange(fig_simu_a, fig_simu_b,
           nrow = 1, labels = c("a", "b"),
-          widths = c(0.4, 0.6)) %>% 
+          widths = c(0.35, 0.65)) %>% 
   ggarrange(fig_simu_c,
             nrow = 2, labels = c("", "c"))
 
