@@ -538,7 +538,7 @@ df_TypeI_omni
 
 ```{r fig.width=4, fig.asp=1.2}
 
-df_omni_cber <- df_TypeI_cber %>% 
+df_omni_cber <- df_TypeI_omni %>% 
   filter(N_IV == 2) %>% 
   pivot_longer(starts_with("TypeI_"), names_to = "effnames", values_to = "TypeI") %>% 
   mutate(adjust = if_else(effnames == "TypeI_omniF", "uncorrected", adjust),
@@ -550,7 +550,7 @@ df_omni_cber <- df_TypeI_cber %>%
                               `omnibus & all\n(CER)`="TypeI_omniF&any")) %>% 
   distinct() 
 
-fig_simu_a <- df_omni_tmp %>% 
+fig_simu_a <- df_omni_cber %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
   geom_col(width=1) +   
   facet_grid(cols=vars(effnames), scales="free_x", space="free_x", switch="x")+
@@ -561,7 +561,7 @@ fig_simu_a <- df_omni_tmp %>%
       scale_x_continuous(breaks = 1.5, expand = c(0, 0.65))
     )) + 
   scale_fill_manual(values = custom_clr[c(1,5)],
-                    breaks = levels(df_omni_tmp$adjust)) + #,  
+                    breaks = levels(df_omni_cber$adjust)) + #,  
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
   labs(y = "Type I Error Rate (%)", fill = "") +
