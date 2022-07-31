@@ -111,11 +111,11 @@ sig_omnibus <- function(df_simu_p, alphas=0.05, isBonferroni=TRUE){
     
     df_simu_sig <- df_simu_sig_long %>% 
       group_by(iter, N_IV, alpha) %>% 
-      summarize(N_sig = sum(sig), 
-                alpha = thealpha,
-                sig_any = N_sig > 0, .groups="drop") %>% 
+      summarize(sig_any = sum(sig) > 0, .groups="drop") %>% 
       left_join(df_simu_sig_long, by = c("iter", "N_IV", "alpha")) %>% 
-      mutate(sig_with_omni = sig_omniF & sig_any)
+      mutate(sig_with_omni = sig_omniF & sig_any) %>% 
+      select(iter, N_IV, effnames, alpha, adjust, 
+             p.value, sig, sig_any, omniF, sig_omniF, sig_with_omni)
     
     return(df_simu_sig)
   }
@@ -126,7 +126,7 @@ sig_omnibus <- function(df_simu_p, alphas=0.05, isBonferroni=TRUE){
   
   if (isBonferroni) {
     ltmpb <- lapply(alphas, sig_omnibus_single, 
-                   df_simu_p=df_simu_p, bonf = TRUE)
+                    df_simu_p=df_simu_p, bonf = TRUE)
     
     df_sig_omni <- bind_rows(ltmp, ltmpb)
   } else {
@@ -235,16 +235,15 @@ sig_main_posthoc <- function(df_simu_p, alphas=0.05) {
              alpha = thealpha,
              contrast = str_remove(contrast, "p_")) 
     
-    df_sim_sig_any <- df_simu_sig_long %>% 
+    df_simu_sig <- df_simu_sig_long %>% 
       group_by(N_level, iter, adjust, alpha) %>% 
-      summarize(N_sigpost = sum(sig), .groups = "drop") 
-    
-    df_simu_sig <- df_simu_sig_long  %>% 
-      pivot_wider(id_cols = c(N_level, iter, adjust, alpha, sig_main), 
-                  names_from = contrast, 
-                  names_prefix = "sig_", 
-                  values_from = sig) %>% 
-      left_join(df_sim_sig_any, by=c("N_level", "iter", "adjust", "alpha"))
+      summarize(sig_anypost = sum(sig) > 0,
+                .groups = "drop") %>% 
+      left_join(df_simu_sig_long, 
+                by = c("N_level", "iter", "adjust", "alpha")) %>% 
+      mutate(`sig_main&posthoc` = sig_main & sig_anypost) %>% 
+      select(iter, N_level, contrast, alpha, adjust, 
+             p.value, sig, sig_anypost, p_main, everything())
     
     return(df_simu_sig) 
   }
@@ -351,7 +350,7 @@ sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NU
     return(one_inter_simple)
   }
   
-
+  
   # run simulation in parallel
   if (!is.null(file_cache) && file.exists(as.character(file_cache))){
     df_simu <- read_rds(file_cache)

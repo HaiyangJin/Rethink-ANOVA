@@ -32,6 +32,7 @@ library(afex)
 library(emmeans)
 library(vcd)
 library(ggpubr)
+library(RColorBrewer)
 
 theme_set(papaja::theme_apa())
 
@@ -524,8 +525,8 @@ p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16,
 ### FWER and CER
 
 ```{r}
-df_TypeI_omni <- sig_omnibus(p_omni, 0.05)  %>% 
-  select(-c(alpha, N_sig, effnames, p.value, sig, omniF)) %>% 
+df_TypeI_omni <- sig_omnibus(p_omni, 0.05) %>% 
+  select(-c(alpha, effnames, p.value, sig, omniF)) %>% 
   distinct() %>% 
   group_by(N_IV, adjust) %>% 
   summarize(TypeI_omniF = mean(sig_omniF), 
@@ -539,7 +540,6 @@ df_TypeI_omni
 ```{r fig.width=4, fig.asp=1.2}
 
 df_omni_cber <- df_TypeI_omni %>% 
-  filter(N_IV == 2) %>% 
   pivot_longer(starts_with("TypeI_"), names_to = "effnames", values_to = "TypeI") %>% 
   mutate(adjust = if_else(effnames == "TypeI_omniF", "uncorrected", adjust),
          adjust = fct_relevel(adjust, "uncorrected"),
@@ -551,6 +551,7 @@ df_omni_cber <- df_TypeI_omni %>%
   distinct() 
 
 fig_simu_a <- df_omni_cber %>% 
+  filter(N_IV == 2) %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
   geom_col(width=1) +   
   facet_grid(cols=vars(effnames), scales="free_x", space="free_x", switch="x")+
@@ -576,40 +577,179 @@ fig_simu_a <- df_omni_cber %>%
 fig_simu_a
 ```
 
-Type I error rates when taking into account omnibus F-test:
-```{r}
-df_w_omni <- dfs_sig_omni %>% 
-  select(-c(N_sig, p.value)) %>% 
-  group_by(N_IV, effnames) %>% 
-  summarize(TypeI = mean(sig_with_omni), .groups = "drop")  %>% 
-  mutate(omni = TRUE)
+```{r fig.width=13, fig.asp=0.4}
 
-df_w_omni %>% 
-  pivot_wider(names_from = effnames, values_from = TypeI) 
+# df_omni_cber_supp <- df_TypeI_omni %>% 
+#   pivot_longer(starts_with("TypeI_"), names_to = "effnames", values_to = "TypeI") %>% 
+#   mutate(adjust = if_else(effnames == "TypeI_omniF", "uncorrected", adjust),
+#          adjust = fct_relevel(adjust, "uncorrected"),
+#          effnames = factor(effnames, 
+#                            levels = c("TypeI_omniF", "TypeI_any", "TypeI_omniF&any")),
+#          effnames = fct_recode(effnames, `omnibus\nF-test` = "TypeI_omniF", 
+#                               `Inspect all\n(FWER)`= "TypeI_any", 
+#                               `omnibus & all\n(CER)`="TypeI_omniF&any")) %>% 
+#   distinct() 
+
+for (i in unique(df_omni_cber$N_IV)) {
+  
+  nam <- paste("fig_simu_a_tmp", i, sep = "")
+  
+  assign(
+    nam, df_omni_cber %>% 
+      filter(N_IV == i) %>% 
+      ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+      geom_col(width=1) +   
+      facet_grid(cols=vars(effnames), scales="free_x", space="free_x", switch="x")+
+      ggh4x::facetted_pos_scales(
+        list(
+          scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+          scale_x_continuous(breaks = 1.5, expand = c(0, 0.65)),
+          scale_x_continuous(breaks = 1.5, expand = c(0, 0.65))
+        )) + 
+      scale_fill_manual(values = custom_clr[c(1,5)],
+                        breaks = levels(df_omni_cber$adjust)) + #,  
+      geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+      scale_y_continuous(limits = c(0, 84), expand = c(0, 0)) +
+      labs(x = paste0("An ANOVA with ", i, " factors"), y = "Type I Error Rate (%)", fill = "") +
+      theme(legend.position = c(0.75, 0.6),
+            axis.ticks.length = unit(.15, "cm"),
+            axis.text.x = element_blank(),
+            panel.spacing.x = unit(0, "pt"),
+            strip.placement = "outside",
+            axis.title.x = element_text(margin = margin(t = 0)))
+  )
+}
+
+fig_simu_a_supp <- ggarrange(fig_simu_a_tmp2, fig_simu_a_tmp3, 
+                             fig_simu_a_tmp4, fig_simu_a_tmp5, 
+                             nrow = 1)
+  
+# ggsave(file.path("images","simu_mainpost.png"), fig_simu_a_supp, width = 8, height = 5.6)
+fig_simu_a_supp
 ```
 
-### Figure
-```{r fig.width=8, fig.asp=0.6}
-fig_simu_a_supp <- bind_rows(df_wo_omni, df_w_omni) %>% 
-  filter(effnames %in% c("A", "sig_any")) %>% 
-  mutate(effnames = fct_recode(effnames, `A single effect` = "A", `FWER` = "sig_any"),
-         omni = as_factor(omni),
-         omni = fct_recode(omni, `Without omnibus F-test` = "FALSE", 
-                           `With omnibus F-test`="TRUE")) %>% 
-  ggplot(aes(x = N_IV, y = TypeI*100, fill = effnames, group = effnames)) +
+
+### Single tests
+
+```{r}
+# with omnibus F-test and significant effect
+df_TypeI_single1 <- sig_omnibus(p_omni, 0.05)  %>% 
+  filter(adjust == "uncorrected") %>% 
+  mutate(sig_omni_single = sig_omniF & sig) %>% # omni and one specific effect
+  select(iter, N_IV, effnames, sig_with_omni, sig_omni_single) %>% 
+  group_by(N_IV, effnames) %>% 
+  summarize(TypeI_cber = mean(sig_with_omni), # omni and at least one sig
+            TypeI_single = mean(sig_omni_single),
+            .groups = "drop") %>% 
+  mutate(Method = "omnibus F-test")
+
+df_TypeI_single2 <- sig_omnibus(p_omni, 0.05)  %>% 
+  filter(adjust == "Bonferroni") %>% 
+  mutate(sig_any_single = sig_any & sig) %>% 
+  select(iter, N_IV, effnames, sig_any, sig_any_single) %>% 
+  group_by(N_IV, effnames) %>% 
+  summarize(TypeI_cber = mean(sig_any), 
+            TypeI_single = mean(sig_any_single),
+            .groups = "drop") %>% 
+  mutate(Method = "Bonferroni")
+
+df_TypeI_single <- bind_rows(df_TypeI_single1, df_TypeI_single2) 
+
+# Type I error rate for single tests (when the FWER is controlled)
+df_TypeI_single %>%
+  distinct() %>% 
+  pivot_wider(names_from = effnames, values_from = TypeI_single) %>% 
+  select(Method, N_IV, TypeI_cber, everything())
+```
+
+
+```{r fig.width=4, fig.asp=1.2}
+fig_simu_a_single <- df_TypeI_single %>% 
+  filter(N_IV == 2) %>% 
+  select(-c(N_IV)) %>% 
+  pivot_wider(c(Method, TypeI_cber), 
+              names_from = effnames, values_from = TypeI_single) %>% 
+  pivot_longer(!("Method"), 
+               names_to = "effnames", values_to = "TypeI") %>% 
+  mutate(effnames = factor(effnames),
+         effnames = fct_relevel(effnames, "TypeI_cber", "A", "B"),
+         effnames = fct_recode(effnames, CBER="TypeI_cber", `main effect A`="A",
+                               `main effect B`="B", interaction="A:B"),
+         Method = paste0(Method, "\n"),
+         Method = as_factor(Method)) %>% 
+  ggplot(aes(x = Method, y = TypeI*100, fill = effnames, group = effnames)) +
   geom_col(position = "dodge") +
-  facet_grid(~ omni, switch = "x") + 
-  scale_fill_manual(values = custom_clr[2:3]) +
+  # facet_grid(~ omni, switch = "x") + 
+  scale_fill_manual(values = custom_clr[1:4]) +
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
-  scale_y_continuous(limits = c(0, 85), expand = c(0, 0)) +
-  labs(x = "Number of factors in an ANOVA", y = "Type I Error Rate (%)", fill = "") +
-  theme(legend.position = c(0.77, 0.55),
+  scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +
+  labs(y = "Type I Error Rate (%)", fill = "") +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  theme(legend.position = c(0.55, 0.85),
+        legend.direction="horizontal",
         axis.ticks.length = unit(.15, "cm"),
         strip.placement = "outside",
-        axis.title.x = element_text(margin = margin(t = 0)))
+        axis.title.x = element_blank())
 
-# ggsave(file.path("images","simu_omnibus.png"), fig_simu_a, width = 8, height = 4.8)
-fig_simu_a_supp
+# ggsave(file.path("images","simu_omnibus_single.png"), fig_simu_a_single, width = 8, height = 4.8)
+fig_simu_a_single
+```
+
+```{r fig.width=8, fig.asp=0.8}
+df_TypeI_single_plot <- df_TypeI_single %>% 
+  pivot_wider(c(Method, N_IV, TypeI_cber), 
+              names_from = effnames, values_from = TypeI_single) %>% 
+  pivot_longer(!c("Method", "N_IV"), 
+               names_to = "effnames", values_to = "TypeI") %>% 
+  mutate(effnames = factor(effnames),
+         effnames = fct_relevel(effnames, "TypeI_cber"),
+         N_IV = factor(N_IV),
+         N_IV = fct_recode(N_IV, `An ANOVA with two factors`="2",
+                           `An ANOVA with three factors`="3",
+                           `An ANOVA with four factors`="4",
+                           `An ANOVA with five factors`="5"),
+         Method = as_factor(Method)) %>% 
+  filter(!is.na(TypeI))
+  
+fig_simu_single_supp1 <- df_TypeI_single_plot %>% 
+  filter(N_IV %in% c("An ANOVA with two factors", "An ANOVA with three factors")) %>% 
+  ggplot(aes(x = Method, y = TypeI*100, fill = effnames, group = effnames)) +
+  geom_col(position = "dodge") +
+  facet_wrap(vars(N_IV), switch = "x") +
+  scale_fill_manual(values = c(custom_clr[c(1,3)], brewer.pal(8,"Set1"), 
+                               brewer.pal(7, "Set2"), brewer.pal(8,"Set3"), brewer.pal(7,"Accent"))) + 
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +
+  labs(y = "Type I Error Rate (%)", fill = "") +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  theme(legend.position = "none",
+        # legend.direction="horizontal",
+        axis.ticks.length = unit(.15, "cm"),
+        strip.placement = "outside",
+        axis.title.x = element_blank())
+
+fig_simu_single_supp2 <- df_TypeI_single_plot %>% 
+  filter(N_IV %in% c("An ANOVA with four factors", "An ANOVA with five factors")) %>% 
+  ggplot(aes(x = Method, y = TypeI*100, fill = effnames, group = effnames)) +
+  geom_col(position = "dodge") +
+  facet_wrap(vars(N_IV), switch = "x") +
+  scale_fill_manual(values = c(custom_clr[c(1,3)], brewer.pal(8,"Set1"), 
+                               brewer.pal(7, "Set2"), brewer.pal(8,"Set3"), brewer.pal(7,"Accent"))) + 
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +
+  labs(y = "Type I Error Rate (%)", fill = "") +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  theme(legend.position = "none",
+        # legend.direction="horizontal",
+        axis.ticks.length = unit(.15, "cm"),
+        strip.placement = "outside",
+        axis.title.x = element_blank())
+
+fig_simu_single_supp <- ggarrange(fig_simu_single_supp1, fig_simu_single_supp2,
+                                  nrow=2)
+
+# ggsave(file.path("images","simu_omnibus_single_supp.png"), fig_simu_single_supp, width = 8, height = 4.8)
+fig_simu_single_supp
 ```
 
 ## Main effect and post-hoc analysis
@@ -622,46 +762,48 @@ p_main_posthoc <- sim_main_posthoc(N_subj = 30, iter = Nsim, n_core=16,
                                    N_levels = c(3,4,5,6)) 
 ```
 
+### FWER and CER
 ```{r}
 df_TypeI_posthoc <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
-  mutate(sig_anypost = N_sigpost > 0, # any of the pairwise comparison is significant
-         sig_both_main_post = sig_main * sig_anypost) %>% # both the main and any of pairwise are significant
   group_by(N_level, alpha, adjust) %>% 
   summarize(TypeI_main = mean(sig_main),
-            TypeI_both = mean(sig_both_main_post), 
             TypeI_postonly = mean(sig_anypost),
+            `TypeI_main&posthoc` = mean(`sig_main&posthoc`), 
             .groups = "drop")
 
 df_TypeI_posthoc
 ```
 
-
 Claim significant results only when both the main effect and at least one of the post-hoc tests (with different multiple comparison corrections) are significant:
 ```{r}
 df_TypeI_posthoc %>% 
   filter(adjust != "uncorrected") %>% # only when using multiple comparison correction
-  select(-TypeI_postonly) %>% 
-  pivot_wider(c(N_level, alpha), names_from=adjust, values_from=TypeI_both)
+  select(-c(TypeI_main, TypeI_postonly)) %>% 
+  pivot_wider(c(N_level, alpha), 
+              names_from=adjust, values_from=`TypeI_main&posthoc`)
 ```
 
-Claim significant results only when the main effect and at least one of the post-hoc tests (without different multiple comparison corrections) are significant:
+Claim significant results only when the main effect and at least one of the post-hoc tests (without multiple comparison corrections) are significant:
 ```{r}
 df_TypeI_posthoc %>% 
-  filter(adjust == "uncorrected")  # only when NOT using multiple comparison correction
+  filter(adjust == "uncorrected") %>%  # only when NOT using multiple comparison correction
+  select(-c(TypeI_main, TypeI_postonly)) %>% 
+  pivot_wider(c(N_level, alpha), 
+              names_from=adjust, values_from=`TypeI_main&posthoc`)
 ```
 
 Claim significant results only when at least one of the post-hoc tests (with different multiple comparison corrections) are significant (regardless of the main effect results): 
 ```{r}
 df_TypeI_posthoc %>% 
   filter(adjust != "uncorrected") %>% # only when using multiple comparison correction
-  select(-TypeI_both) %>% 
-  pivot_wider(c(N_level, alpha), names_from=adjust, values_from=TypeI_postonly)
+  select(-c(TypeI_main, TypeI_postonly)) %>% 
+  pivot_wider(c(N_level, alpha), 
+              names_from=adjust, values_from=`TypeI_main&posthoc`)
 ```
 
-### Figure
 ```{r fig.width=8, fig.asp=0.7}
 df_posthoc_tmp <- df_TypeI_posthoc %>% 
-  filter(N_level == 4) %>% 
+  # filter(N_level == 4) %>% 
   pivot_longer(starts_with("TypeI_"), names_to = "effects", values_to = "TypeI") %>% 
   mutate(adjust = if_else(effects == "TypeI_main", "uncorrected", 
                           if_else(adjust == "uncorrected", "uncorrected", 
@@ -669,13 +811,14 @@ df_posthoc_tmp <- df_TypeI_posthoc %>%
          adjust = fct_reorder(adjust, TypeI, mean, .desc=TRUE),
          adjust = fct_relevel(adjust, "uncorrected"),
          effects = factor(effects, 
-                          levels = c("TypeI_main", "TypeI_postonly", "TypeI_both")),
+                          levels = c("TypeI_main", "TypeI_postonly", "TypeI_main&posthoc")),
          effects = fct_recode(effects, `Main effect\n` ="TypeI_main", 
                               `Post-hoc analysis\n(six tests, FWER)`="TypeI_postonly", 
-                              `Main effect & Post-hoc analysis\nwith six tests (CER)`="TypeI_both")) %>% 
+                              `Main effect & Post-hoc analysis\nwith six tests (CER)`="TypeI_main&posthoc")) %>% 
   distinct() 
 
 fig_simu_b <- df_posthoc_tmp %>% 
+  filter(N_level == 4) %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
   geom_col(width=1) +   
   facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
@@ -704,27 +847,13 @@ fig_simu_b
 
 
 ```{r fig.width=13, fig.asp=.7}
-df_posthoc_tmp_supp <- df_TypeI_posthoc %>% 
-  pivot_longer(starts_with("TypeI_"), names_to = "effects", values_to = "TypeI") %>% 
-  mutate(adjust = if_else(effects == "TypeI_main", "uncorrected", 
-                          if_else(adjust == "uncorrected", "uncorrected", 
-                                  str_to_title(as.character(adjust)))),
-         adjust = fct_reorder(adjust, TypeI, mean, .desc=TRUE),
-         adjust = fct_relevel(adjust, "uncorrected"),
-         effects = factor(effects, 
-                          levels = c("TypeI_main", "TypeI_postonly", "TypeI_both")),
-         effects = fct_recode(effects, `Main effect\n` ="TypeI_main", 
-                              `Post-hoc analysis\n(pairwise comparisons)`="TypeI_postonly", 
-                              `Conjunction Type I Error Rate (CER)\n(main effect & pairwise comparisons)`="TypeI_both")) %>% 
-  distinct() 
 
-
-for (i in unique(df_posthoc_tmp_supp$N_level)) {
+for (i in unique(df_posthoc_tmp$N_level)) {
   
   nam <- paste("fig_simu_b_tmp", i, sep = "")
   
   assign(
-    nam, df_posthoc_tmp_supp %>% 
+    nam, df_posthoc_tmp %>% 
     filter(N_level == i) %>% 
     ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
     geom_col(width=1) +   
@@ -739,7 +868,7 @@ for (i in unique(df_posthoc_tmp_supp$N_level)) {
                       breaks = levels(df_posthoc_tmp$adjust)) + #,  
     geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
     scale_y_continuous(limits = c(0, 45), expand = c(0, 0)) +
-    labs(x = paste0("A main effect with a factor of ", i, " levels"), y = "Type I Error Rate (%)", fill = "") +
+    labs(x = paste0("A main effect with ", i, " levels"), y = "Type I Error Rate (%)", fill = "") +
     theme(legend.position = c(0.75, 0.6),
           axis.ticks.length = unit(.15, "cm"),
           axis.text.x = element_blank(),
@@ -757,6 +886,123 @@ fig_simu_b_supp <- ggarrange(fig_simu_b_tmp3, fig_simu_b_tmp4,
 # ggsave(file.path("images","simu_mainpost.png"), fig_simu_b_supp, width = 8, height = 5.6)
 fig_simu_b_supp
 ```
+
+### Single tests
+
+```{r}
+# with omnibus F-test and significant effect
+df_TypeI_main_single1 <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
+  filter(adjust == "uncorrected") %>% 
+  mutate(sig_main_single = sig_main & sig) %>% # main and one pairwise comparison
+  select(iter, N_level, contrast, `sig_main&posthoc`, sig_main_single) %>% 
+  group_by(N_level, contrast) %>% 
+  summarize(TypeI_cber = mean(`sig_main&posthoc`), # main and at least one sig
+            TypeI_single = mean(sig_main_single),
+            .groups = "drop") %>% 
+  mutate(Method = "Main effect & Post-hoc")
+
+df_TypeI_main_single2 <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
+  filter(adjust != "uncorrected") %>% 
+  mutate(sig_any_single = sig_anypost & sig, # correction and one specific effect
+         Method=str_to_title(adjust)) %>% 
+  select(iter, N_level, contrast, Method, sig_anypost, sig_any_single) %>% 
+  group_by(N_level, contrast, Method) %>% 
+  summarize(TypeI_cber = mean(sig_anypost), # correction and at least one sig
+            TypeI_single = mean(sig_any_single),
+            .groups = "drop") 
+
+df_TypeI_main_single <- bind_rows(df_TypeI_main_single1, df_TypeI_main_single2) 
+
+# Type I error rate for single tests (when the FWER is controlled)
+df_TypeI_main_single %>%
+  pivot_wider(names_from = contrast, values_from = TypeI_single) %>% 
+  select(Method, N_level, TypeI_cber, everything())
+```
+
+```{r fig.width=12, fig.asp=0.4}
+fig_simu_b_single <- df_TypeI_main_single %>% 
+  filter(N_level == 4) %>% 
+  select(-c(N_level)) %>% 
+  pivot_wider(c(Method, TypeI_cber), 
+              names_from = contrast, values_from = TypeI_single) %>% 
+  pivot_longer(!("Method"), 
+               names_to = "contrast", values_to = "TypeI") %>% 
+  mutate(contrast = factor(contrast),
+         contrast = fct_relevel(contrast, "TypeI_cber"),
+         contrast = fct_recode(contrast, CBER="TypeI_cber"),
+         contrast = str_replace_all(contrast, "IV", "level"),
+         Method = if_else(str_starts(Method, "Main"), 
+                          paste0(Method, "\n(uncorrected)"),
+                          paste0(Method, "\n(post-hoc only)")),
+         Method = as_factor(Method),
+         Method = fct_reorder(Method, TypeI, mean, .desc=TRUE)) %>%
+  ggplot(aes(x = Method, y = TypeI*100, fill = contrast, group = contrast)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = custom_clr) +
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +
+  labs(y = "Type I Error Rate (%)", fill = "") +
+  guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+  theme(legend.position = c(0.5, 0.85),
+        legend.direction="horizontal",
+        axis.ticks.length = unit(.15, "cm"),
+        strip.placement = "outside",
+        axis.title.x = element_blank())
+
+# ggsave(file.path("images","simu_main_single.png"), fig_simu_b_single, width = 8, height = 4.8)
+fig_simu_b_single
+```
+
+
+```{r fig.width=12, fig.asp=1.5}
+
+for (i in unique(df_TypeI_main_single$N_level)) {
+  
+  nam <- paste("fig_simu_b_single_tmp", i, sep = "")
+  
+  assign(
+    nam, df_TypeI_main_single %>% 
+      filter(N_level == i) %>% 
+      select(-c(N_level)) %>% 
+      pivot_wider(c(Method, TypeI_cber), 
+                  names_from = contrast, values_from = TypeI_single) %>% 
+      pivot_longer(!("Method"), 
+                   names_to = "contrast", values_to = "TypeI") %>% 
+      mutate(contrast = factor(contrast),
+             contrast = fct_relevel(contrast, "TypeI_cber"),
+             contrast = fct_recode(contrast, CBER="TypeI_cber"),
+             contrast = str_replace_all(contrast, "IV", "level"),
+             Method = if_else(str_starts(Method, "Main"), 
+                          paste0(Method, "\n(uncorrected)"),
+                          paste0(Method, "\n(post-hoc only)")),
+             Method = as_factor(Method),
+             Method = fct_reorder(Method, TypeI, mean, .desc=TRUE)) %>%
+      ggplot(aes(x = Method, y = TypeI*100, fill = contrast, group = contrast)) +
+      geom_col(position = "dodge") +
+      scale_fill_manual(values = c(custom_clr[c(1,3)], brewer.pal(8,"Set1"),
+                                   brewer.pal(6,"Set3"))) +
+      geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+      scale_y_continuous(limits = c(0, 7), expand = c(0, 0)) +
+      labs(x = paste0("A main effect with ", i, " levels"), y = "Type I Error Rate (%)", fill = "") +
+      guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
+      theme(legend.position = c(0.5, 0.88),
+            legend.direction="horizontal",
+            axis.ticks.length = unit(.15, "cm"),
+            strip.placement = "outside")
+  )
+}
+
+fig_main_single_supp <- ggarrange(fig_simu_b_single_tmp3, 
+                                  fig_simu_b_single_tmp4,
+                                  fig_simu_b_single_tmp5,
+                                  fig_simu_b_single_tmp6,
+                                  ncol=1)
+
+# ggsave(file.path("images","simu_main_single.png"), fig_simu_b_single, width = 8, height = 4.8)
+fig_main_single_supp
+```
+
+
 ## Interaction and simple effect analysis
 
 ```{r}
@@ -855,7 +1101,7 @@ fig_simu_c
 
 ```{r fig.width=10.5, fig.asp=0.35}
 df_inter_simp_tmp_supp <- df_TypeI_inter %>% 
-  filter(group != "byA_2") %>% 
+  filter(group != "byA_2") %>% # the only difference from previous figure
   select(-c(group, inter)) %>% 
   add_row(adjust="uncorrected", effects = "Interaction\n", 
           TypeI = unique(df_TypeI_inter$inter)) %>% 
@@ -900,6 +1146,8 @@ fig_simu_c_supp <- df_inter_simp_tmp_supp %>%
 # ggsave(file.path("images","simu_mainpost.png"), fig_simu_c_supp, width = 8, height = 5.6)
 fig_simu_c_supp
 ```
+
+### Single tests
 
 
 # The complete composite face paradigm: repeated-measures ANOVA and hierarchical modeling
@@ -1117,6 +1365,14 @@ fig_simu <- ggarrange(fig_simu_a, fig_simu_b,
 fig_simu
 ```
 
+```{r fig.width=10.5, fig.asp=0.4}
+
+# fig_simu_single <- 
+  ggarrange(fig_simu_a_single, fig_simu_b_single,
+          nrow = 1, labels = c("a", "b"),
+          widths = c(0.3, 0.7))
+```
+
 
 
 ## Table 1
@@ -1124,16 +1380,27 @@ fig_simu
 
 # Supplemenatry
 
+```{r fig.width=13, fig.asp=0.4}
+fig_simu_a_supp
+```
+
+
+```{r fig.width=8, fig.asp=0.8}
+fig_simu_single_supp
+```
+
+
 ```{r fig.width=13, fig.asp=.7}
 fig_simu_b_supp
 ```
 
+```{r fig.width=12, fig.asp=1.5}
+fig_main_single_supp
+```
 
 ```{r fig.width=10.5, fig.asp=0.35}
 fig_simu_c_supp
 ```
-
-
 
 # Session information {.unlisted .unnumbered}
 ```{r}
