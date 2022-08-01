@@ -1161,10 +1161,10 @@ df_TypeI_inter_single <- sig_inter_simple(p_inter_simple, 0.05) %>%
     contrast == "a1 b2 - a2 b2" ~ "b2_(a1 - a2)",
     contrast == "a2 b1 - a2 b2" ~ "a2_(b1 - b2)",
     contrast == "TypeI_cber" ~ "CBER",
-    contrast == "TypeI_cber_inter" ~ "Interation",
+    contrast == "TypeI_cber_inter" ~ "Interaction",
     TRUE ~ contrast),
     contrast = as_factor(contrast),
-    contrast = fct_relevel(contrast, "CBER", "Interation",
+    contrast = fct_relevel(contrast, "CBER", "Interaction",
                            "a1_(b1 - b2)", "a2_(b1 - b2)"),
     Method = fct_reorder(Method, TypeI, mean, .desc=TRUE),
     Method = fct_relevel(Method, "Inter. & simple\n(uncorrected)"),
@@ -1173,7 +1173,8 @@ df_TypeI_inter_single <- sig_inter_simple(p_inter_simple, 0.05) %>%
                          "Simple effect analysis with two tests"),
     grouplabel = as_factor(grouplabel),
     grouplabel = fct_relevel(grouplabel, "Simple effect analysis with two tests")
-  )
+  ) %>% 
+  filter(contrast!="Interaction")
 
 df_TypeI_inter_single
 ```
@@ -1184,7 +1185,7 @@ fig_simu_single_c <- df_TypeI_inter_single %>%
   ggplot(aes(x = Method, y = TypeI*100, fill = contrast, group = contrast)) +
   geom_col(position = "dodge") +
   facet_grid(cols=vars(grouplabel), switch="x") +
-  scale_fill_manual(values = c(custom_clr[1], "#000000", custom_clr[2:7])) +
+  scale_fill_manual(values = custom_clr) +
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
   labs(y = "Type I Error Rate (%)", fill = "") +
