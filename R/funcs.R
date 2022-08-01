@@ -113,9 +113,9 @@ sig_omnibus <- function(df_simu_p, alphas=0.05, isBonferroni=TRUE){
       group_by(iter, N_IV, alpha) %>% 
       summarize(sig_any = sum(sig) > 0, .groups="drop") %>% 
       left_join(df_simu_sig_long, by = c("iter", "N_IV", "alpha")) %>% 
-      mutate(sig_with_omni = sig_omniF & sig_any) %>% 
+      mutate(`sig_omni&any` = sig_omniF & sig_any) %>% 
       select(iter, N_IV, effnames, alpha, adjust, 
-             p.value, sig, sig_any, omniF, sig_omniF, sig_with_omni)
+             p.value, sig, sig_any, omniF, sig_omniF, `sig_omni&any`)
     
     return(df_simu_sig)
   }
@@ -397,8 +397,7 @@ sig_inter_simple <- function(df_simu_p, alphas=0.05) {
       summarize(sig_any_simple = sum(sig_simple)>0, .groups = "drop")
     
     df_simu_sig <- df_simu_sig_long  %>% 
-      select(iter, adjust, group, alpha, N, sig_inter) %>% 
-      distinct() %>% 
+      select(iter, adjust, group, alpha, N, contrast, sig_simple, sig_inter) %>% 
       right_join(df_sim_sig_any, by=c("iter", "adjust", "group", "alpha")) %>% 
       mutate(`sig_inter&any` = sig_inter & sig_any_simple)
     
