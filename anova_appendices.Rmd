@@ -1,0 +1,286 @@
+---
+title             : 'Appendices for "ANOVA conventions may not work as you wish"'
+shorttitle         : "ANOVA conventions"
+
+author: 
+  - name: "Haiyang Jin"
+    affiliation: ""
+    address: ""
+    email: "haiyang.jin@outlook.com"
+    corresponding: yes
+    
+affiliation:
+  - id            : ""
+    institution   : ""
+  
+authornote        : 
+keywords          : "analysis of variances; practical applications; confirmatory data analysis; hypothesis-based Type I error rate; simple interaction analysis"
+wordcount         : "X"
+
+figurelist        : false
+tablelist         : false
+footnotelist      : false
+linenumbers       : false
+mask              : false
+draft             : false
+floatsintext      : true
+
+documentclass     : "apa6"
+classoption       : "man"
+numbersections    : false
+link-citations    : true
+
+output:
+    # papaja::apa6_word:
+    #     toc: no
+    papaja::apa6_pdf:
+        toc: no
+        toc_depth: 3
+        highlight: default
+        latex_engine: xelatex
+        
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+
+header-includes   :
+- \usepackage{booktabs}
+- \usepackage{amsmath}
+- \usepackage[american]{babel}
+- \usepackage[utf8]{inputenc}
+# - \usepackage[T1]{fontenc}
+- \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
+bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/r-references.bib"]
+---
+
+```{r setup, include=FALSE}
+## load libraries
+library(knitr)
+library(tidyverse)
+library(afex)
+library(emmeans)
+library(lme4)
+library(papaja)
+
+options(emmeans=list(msg.interaction=FALSE))
+theme_set(theme_apa())
+
+# set global chunk options, put figures into folder
+options(tinytex.verbose = TRUE)
+options(warn=-1, replace.assign=TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  include = TRUE,
+  # warning = FALSE,
+  fig.align = "center",
+  fig.path = "figures/figure-",
+  fig.show = "hold",
+  fig.width=7, fig.asp =0.618,
+  width = 1800, 
+  message = FALSE
+)
+
+set.seed(2022)
+```
+
+\appendix
+
+# A hypothetical training study
+
+In this hypothetical training study, let us assume that two protocols were proposed to train participants' face recognition abilities. We would like to know (1) whether the first protocol is effective, (2) whether the second protocol is effective, and (3) which protocol is more effective. Two groups of participants were trained with Protocol 1 and 2, respectively, and a third group completed a control task. All participants' performance in recognizing faces was measured before and after the training (or the control task). In summary, it is a 3 (Group: control, Protocol 1, vs. Protocol 2) × 2 (Test: pre-test vs. post-test) mixed experimental design. 
+
+Before performing any analysis, we need to clarify which effects should be examined for answering each question and the logical relationships among them in rejecting the null hypothesis of research interest:   
+
+1. For the first two questions, we need to examine (1) whether the post-test performance is *better* than the pre-test in the training group (e.g., Protocol 1), and (2) whether the performance increases (i.e., post-test $-$ pre-test) in the training group (e.g., Protocol 1) are *larger* than the control group. We may claim that the training protocol (e.g., Protocol 1) is effective only when both tests are significant with particular difference directions.
+2. For the third question, we need to examine (1) whether the performance increases in Protocol 1 group are different from Protocol 2 group, (2) whether the post-test performance is *better* than the pre-test in Protocol 1 group, and (3) whether the post-test performance is *better* than the pre-test in Protocol 2 group. We may claim that Protocol 1 is more effective if only (1) and (2) are significant with particular difference directions. We may claim that Protocol 2 is more effective if only (1) and (3) are significant with particular difference directions. If all three tests are significant, we need to check the direction of the interaction to conclude which protocol is more effective.
+
+The alpha level of 0.05 would be used at the single test level for all these effects, and, therefore, the Hypothesis-based Type I Error Rate (HER) is not higher than 0.05 (see Appendix C).  
+
+## Simulating data
+
+Let us simulate a data set for the above design with 30 participants for each group. Please refer to the codes in the open materials for detailed simulation procedures. Table \@ref(tab:simu-true) displays the ground truth for each condition, and the structure of the simulated data is as follows:
+
+```{r message=FALSE, warning=FALSE}
+Groups <- c("control", "protocol1", "protocol2") # Between-subject
+Test <- c("pre_test", "post_test") # Within-subject
+
+N_1 <- 30 # number of participant in each group
+
+mean_pre <- 3 # mean of pre-test performance
+delta <- c(0.5, 0.7, 1.3) + mean_pre # means of post-test performance
+
+rho <- 0.5  # correlation between pre- and post-tests
+sd <- 0.5   # the same standard deviation/variances were used
+
+C <- matrix(rho, nrow = 2, ncol = 2)
+diag(C) <- 1
+
+simu_control <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[1]), sigma = C*sd^2)
+simu_protocal1 <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[2]), sigma = C*sd^2)
+simu_protocal2 <- mvtnorm::rmvnorm(N_1, c(mean_pre, delta[3]), sigma = C*sd^2)
+
+df_simu_train <- rbind(simu_control, simu_protocal1, simu_protocal2) %>% 
+  as_tibble() %>% 
+  transmute(Subj = 1:(N_1*3),
+            Group = rep(Groups, each = N_1),
+            pre = V1,
+            post = V2) %>% 
+  pivot_longer(c(pre, post), names_to = "Test", values_to = "d")
+```
+
+```{r simu-true}
+tibble(Test = c("pre-test", "post-test"),
+       control = c(mean_pre, delta[1]),
+       `Protocol 1` = c(mean_pre, delta[2]),
+       `Protocol 2` = c(mean_pre, delta[3])) %>% 
+  apa_table(caption='The ground truth for each condition.',
+            note='Population parameters used to simulate data for the hypothetical training study.')
+```
+
+```{r}
+str(df_simu_train)
+```
+
+## Mixed ANOVA
+
+When ANOVA is used, we should examine the following effects:
+
+1. For the first question, one simple effect (i.e., the comparison between pre- and post-tests in Protocol 1 group) and the simple interaction between Group (control vs. Protocol 1) and Test (pre- vs. post-tests) should be examined.
+2. For the second question, one simple effect (i.e., the comparison between pre- and post-tests in Protocol 2 group) and the simple interaction between Group (control vs. Protocol 2) and Test (pre- vs. post-tests) should be examined.
+3. For the third question, two simple effects (i.e., the comparisons between pre- and post-tests in the two training groups) and the simple interaction between Group (Protocol 1 vs. Protocol 2) and Test (pre- vs. post-tests) should be examined.
+
+Noteworthy that some of the above effects are expected to be in particular directions, and, however, ANOVA obscures the directional information. Therefore, we additionally need to check descriptive statistics to make sure the directions of differences are as expected. 
+
+For the above three questions, researchers may conduct three 2 $\times$ 2 ANOVAs separately. Nevertheless, one caveat is that when three 2 $\times$ 2 ANOVAs are used, even though the variances for each condition are assumed to be homogeneous in each ANOVA, the variances of the same condition may differ in different ANOVAs. For instance, the variances of pre-test performance in the control group may be different in the two 2 $\times$ 2 ANOVAs for answering the first two questions. This caveat does not mean that performing three 2 $\times$ 2 ANOVAs is incorrect, but researchers should clarify the assumptions underlying this approach. Alternatively, we may conduct a typical 3 (Group: control, Protocol 1, vs. Protocol 2) × 2 (Test: pre-test vs. post-test) mixed-ANOVA at first and then examine the above effects with specific contrasts. The 3 (Group: control, Protocol 1, vs. Protocol 2) × 2 (Test: pre-test vs. post-test) mixed-ANOVA is conducted with `library(afex)` as follows:
+
+```{r echo=TRUE}
+train_aov <- aov_4(d ~ Group * Test + (Test | Subj),
+                   data = df_simu_train)
+```
+
+The results are not displayed as none of these effects can provide answers for the above questions. Next, we use `library(emmeans)` to test two simple effects of interest:
+
+```{r echo=TRUE}
+train_emm <- emmeans(train_aov, ~ Test + Group)
+simp <- contrast(train_emm, method = "revpairwise", by="Group")
+simp[2:3]
+```
+
+These results show that the post-test performance is better than the pre-test in both training groups. Nevertheless, we should not only use these results to draw conclusions for the three questions. Next, we conduct the simple interaction analysis:
+
+```{r echo=TRUE}
+contrast(train_emm, interaction="revpairwise")
+```
+
+Simple interaction analysis results show that performance increases in Protocol 2 group are higher than the Protocol 1 and control group, respectively. No significant differences are observed between the Protocol 1 and control group regarding the performance increases.  
+
+With the results of both simple effects and simple interaction effects, we may claim that:
+
+1. We fail to observe the evidence that Protocol 1 is effective. (Note that we cannot claim that Protocol 1 is not effective with the above evidence.)
+2. Protocol 2 is effective.
+3. Protocol 2 is more effective than Protocol 1.
+
+## Custom contrasts
+
+Suppose another researcher wonders whether the average performance increases across the two training groups are higher than those of the control group. None of the main effects, interaction, post-hoc tests, simple effects analysis, or simple interaction analysis, can be used to answer this question. They need to apply the custom contrast of `c(1, -1, -.5, .5, -.5, .5)` to the control pre-test, control post-test, Protocol 1 pre-test, Protocol 1 post-test, Protocol 2 pre-test, and Protocol 2 post-test conditions:
+
+```{r echo=TRUE}
+contrast(train_emm, method = list("average training"=c(1, -1, -.5, .5, -.5, .5)))
+```
+
+Results show that the average training performance increases are statistically higher than the control group.
+
+# The complete composite face paradigm: repeated-measures ANOVA and hierarchical modeling
+
+One of the popular paradigms measuring holistic face processing is the complete composite face task [@jinHolisticFaceProcessing2022; @richlerMetaanalysisReviewHolistic2014]. In this task, participants view two consecutive composite faces (created by combining top and bottom facial halves from different identities) and judge whether the two top halves are the same or different while ignore the bottom halves. There are mainly three independent variables in this paradigm: Congruency (*congruent* vs. *incongruent*), Alignment (*aligned* vs. *misaligned*), and Identity (*same* vs. *different*). Identity (*same* vs. *different*) refers to whether the two top (i.e., target) halves are the same or different (Figure \@ref(fig:ccf-design)). Alignment (*aligned* vs. *misaligned*) refers to whether the top and bottom facial halves are aligned or misaligned. Congruency (*congruent* vs. *incongruent*) refers to whether the situations of two top facial halves are the same as those of two bottom halves (Figure \@ref(fig:ccf-design)). Specifically, in *congruent* trials, when the two top facial halves are the same, the two bottom halves are also the same; when the two top facial halves are different, the bottom halves are different as well. Since in congruent trials, the situations are the same for both the top and bottom facial halves, the bottom halves are expected to facilitate the processing of top halves if participants could not ignore the bottom halves. By contrast, in *incongruent* trials, when the two top facial halves are different, the bottom halves are the same; when the two top halves are the same, the bottom halves are different. Thus, the bottom halves are expected to interfere with the processing of top halves if participants could not ignore the bottom halves. In other words, participants are expected to perform better in the *congruent* relative to *incongruent* trials (for aligned faces), which is also known as the Congruency effect [e.g., @richlerHolisticProcessingPredicts2011]. Critically, this Congruency effect should be smaller for misaligned composite faces if the influence of bottom halves on the top halves mainly occurs for aligned (intact) faces, which is also known as the composite face effect [CFE; e.g., @richlerHolisticProcessingPredicts2011]. One of the expected result patterns is displayed in Figure \@ref(fig:ccf-result). For this result pattern, we should observe a significant interaction between Congruency and Alignment if we perform a 2 (Congruency: *congruent* vs. *incongruent*) $\times$ 2 (Alignment: *aligned* vs. *misaligned*) repeated-measures ANOVA. This interaction is typically employed as the index of CFE [e.g., @jinHolisticFaceProcessing2022; @richlerHolisticProcessingPredicts2011; @rossReliabilityCompositetaskMeasurements2015]. However, a significant interaction between Congruency and Alignment does not guarantee the expected result pattern of CFE. As discussed in the main text, we also need to examine the Congruency effect in the aligned condition. Overall, we need to examine (1) whether the Congruency effect is larger than 0 in the aligned condition and (2) whether the Congruency effect in the aligned condition is larger than that in the misaligned condition. 
+
+(ref:ccf-design-caption) Experimental designs of the complete composite face paradigm for aligned faces only. On each trial, participants are instructed to judge whether the top halves of the study and test faces are the same or not. The letters denote facial identities. *Same* and *different* refers to whether the two top facial halves are the same or different. Congruency (*congruent* vs. *incongruent*) refers to whether the situations of top facial halves are the same as those of bottom halves. In *congruent* trials, when the two top halves are the same, the bottom halves are also the same; when the two top halves are different, the bottom halves are also different. In *incongruent* trials, when the top halves are the same, the bottom halves are different; when the top facial halves are different, the bottom halves are the same.
+
+```{r ccf-design, fig.width=5, fig.cap="(ref:ccf-design-caption)"}
+knitr::include_graphics("images/ccf_design.png")
+```
+
+(ref:ccf-result-caption) One expected result pattern for the complete composite face paradigm, i.e., the composite effect. The solid (red) and dashed (green) lines denote the *congruent* and *incongruent* conditions, respectively. The *same* and *different* trials are treated as "signal" and "noise" in the signal detection theory, and both of them are used to calculate sensitivity *d*' to describe the behavioral performance.
+
+```{r ccf-result, fig.cap="(ref:ccf-result-caption)"}
+tibble(Alignment = rep(c("aligned", "misaligned"), each=2),
+       Congruency = rep(c("congruent", "incongruent"), 2),
+       d = c(3.5, 2, 3, 2.9)) %>% 
+  ggplot(aes(Alignment, d, color=Congruency, group=Congruency)) +
+  geom_point(size=3, position=position_dodge(.1)) +
+  geom_line(aes(linetype=Congruency), size=1) +
+  ylim(c(0, 4)) +
+  labs(y="Sensitivity"~italic(d)~"'") +
+  theme(text = element_text(size = 18))
+```
+
+Next, a subset of one previous study data [@jinHolisticFaceProcessing2022] is used to examine whether there is evidence for CFE with repeated-measures ANOVA and hierarchical models.
+
+## Repeated-measures ANOVA
+
+When using repeated-measures ANOVA, we need to test (1) one simple effect, i.e., the comparison between *congruent* and *incongruent* trials in the aligned condition, and (2) the interaction between *Congruency* and *Alignment*. 
+
+```{r include=FALSE}
+# read and make the data into long format
+df_cf_wide <- read_csv(here::here("data", "Jin_E1_d_wide.csv"))
+df_cf_long <- df_cf_wide %>% 
+  pivot_longer(contains("."),names_to=c("Congruency", "Alignment"), 
+               names_sep="[.]", values_to="d")
+```
+
+The 2 (Congruency: *congruent* vs. *incongruent*) $\times$ 2 (Alignment: *aligned* vs. *misaligned*) repeated-measures ANOVA is conducted as follows:
+
+```{r echo=T}
+cf_aov <- aov_4(d ~ Congruency * Alignment + 
+                  (Congruency * Alignment | Participant),
+                data = df_cf_long)
+cf_aov
+```
+
+We may check the interaction results in the above ANOVA table. However, we additionally have to examine the directional information from the results of the descriptive statistics. Alternatively, we may obtain the directional information by:
+
+```{r echo=T}
+emm_aov <- emmeans(cf_aov, ~ Congruency + Alignment)
+contrast(emm_aov, interaction="pairwise")
+```
+
+These results show that the Congruency effect in the aligned condition is larger than that in the misaligned condition. Next, we examine the simple effects according to our research question:
+
+```{r echo=T}
+contrast(emm_aov, "pairwise", by="Alignment")[1]
+```
+
+Results of this simple effect show that the Congruency effect is larger than 0 in the aligned condition. Figure \@ref(fig:aov-emm) displays the estimated marginal means for each condition. With both the statistically significant interaction and simple effect with particular difference directions, we may claim that the composite effect is observed in this study. 
+
+(ref:aov-emm-caption) Estimated marginal means of sensitivity *d*' as a function of Congruency and Alignment in @jinHolisticFaceProcessing2022. The solid (red) and dashed (green) lines denote the *congruent* and *incongruent* conditions, respectively. Results showed that (1) higher sensitivity *d*' for the congruent relative to incongruent trials for aligned faces and (2) stronger Congruency effects for aligned relative to misaligned faces. The composite face effect was observed in this study. Error bars denote the 95% confidence intervals.
+
+```{r aov-emm, fig.cap="(ref:aov-emm-caption)"}
+ggplot(as_tibble(emm_aov), 
+       aes(Alignment, emmean, color=Congruency, group=Congruency)) +
+  geom_point(size=3, position=position_dodge(.1)) +
+  geom_line(aes(linetype=Congruency), size=1) +
+  geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL), 
+                width=.15, position=position_dodge(.1)) +
+  ylim(c(0, 4)) +
+  labs(y="Sensitivity"~italic(d)~"'") +
+  theme(text = element_text(size = 18))
+```
+
+## Hierarchical modeling
+
+When hierarchical models are used, we need to examine (1) whether there is a Congruency effect in the aligned condition (i.e., whether the performance on congruent trials is better than that on incongruent trials in the aligned condition), and (2) whether the Congruency effect in the aligned condition is larger than that in the misaligned condition. For simplicity, the condition means of each participant and the intercept-only model are used in this analysis. It is typically more beneficial to conduct hierarchical models with the full random-effects structure on the trial-level data. Anyhow, this simplification would not invalidate the following demonstration. The hierarchical model is built as follows:
+
+```{r}
+df_cf_long <- df_cf_long %>% 
+  mutate(Congruency = substr(Congruency, 1, 3),
+         Alignment = substr(Alignment, 1, 3))
+```
+
+```{r, echo=T}
+cf_lmm <- lmer(d ~ Congruency * Alignment + (1 | Participant),
+               data = df_cf_long)
+round(summary(cf_lmm)$coefficients, 3)
+```
+
+With the default dummy coding in R, `Congruencyinc` examines how much the performance on aligned incongruent trials is higher than that on aligned congruent trials, which is significantly smaller than 0. `Congruencyinc:Alignmentmis` examines how much the Congruency effect in the aligned condition is larger than that in the misaligned condition, which is significantly larger than 0. In other words, the Congruency effect in the aligned condition is larger than 0, and it is also larger than that in the misaligned condition. With this evidence, we may claim to observe the composite effect in this study. Note that since our predictions are directional, we may use one-sided instead of two-sided tests. Specifically, we may use a t-value of 1.65 instead of 1.96 as the threshold to claim statistical significance.
+
+
+\newpage
