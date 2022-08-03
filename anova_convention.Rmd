@@ -574,7 +574,7 @@ fig_simu_a <- df_omni_cber %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
   
-# ggsave(file.path("images","fig_simu_TypeI_omni.png"), fig_simu_a, width = 4, height = 5.6)
+# ggsave(file.path("figures","fig_simu_TypeI_omni.png"), fig_simu_a, width = 4, height = 5.6)
 fig_simu_a
 ```
 
@@ -614,7 +614,7 @@ fig_simu_a_supp <- ggarrange(fig_simu_a_tmp2, fig_simu_a_tmp3,
                              fig_simu_a_tmp4, fig_simu_a_tmp5, 
                              nrow = 1)
   
-# ggsave(file.path("images","fig_simu_TypeI_omni_supp.png"), fig_simu_a_supp, width = 14, height = 5.6)
+# ggsave(file.path("figures","fig_simu_TypeI_omni_supp.png"), fig_simu_a_supp, width = 14, height = 5.6)
 fig_simu_a_supp
 ```
 
@@ -680,7 +680,7 @@ fig_simu_single_a <- df_TypeI_single %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
 
-# ggsave(file.path("images","fig_simu_single_omni.png"), fig_simu_single_a, width = 4, height = 5.6)
+# ggsave(file.path("figures","fig_simu_single_omni.png"), fig_simu_single_a, width = 4, height = 5.6)
 fig_simu_single_a
 ```
 
@@ -722,7 +722,7 @@ fig_simu_single_a_supp <- ggarrange(
             ncol=2, widths = c(0.4, 0.6)),
   nrow = 2)
 
-# ggsave(file.path("images","fig_simu_single_omni_supp.png"), fig_simu_single_a_supp, width = 10, height = 7)
+# ggsave(file.path("figures","fig_simu_single_omni_supp.png"), fig_simu_single_a_supp, width = 10, height = 7)
 fig_simu_single_a_supp
 ```
 
@@ -812,7 +812,7 @@ fig_simu_b <- df_posthoc_tmp %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
   
-# ggsave(file.path("images","fig_simu_TypeI_mainpost.png"), fig_simu_b, width = 8, height = 5.6)
+# ggsave(file.path("figures","fig_simu_TypeI_mainpost.png"), fig_simu_b, width = 8, height = 5.6)
 fig_simu_b
 ```
 
@@ -855,7 +855,7 @@ fig_simu_b_supp <- ggarrange(fig_simu_b_tmp3, fig_simu_b_tmp4,
                              fig_simu_b_tmp5, fig_simu_b_tmp6, 
                              nrow = 2, ncol = 2)
 
-# ggsave(file.path("images","fig_simu_TypeI_mainpost_supp.png"), fig_simu_b_supp, width = 13, height = 8)
+# ggsave(file.path("figures","fig_simu_TypeI_mainpost_supp.png"), fig_simu_b_supp, width = 13, height = 8)
 fig_simu_b_supp
 ```
 
@@ -920,7 +920,7 @@ fig_simu_single_b <- df_TypeI_main_single %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
 
-# ggsave(file.path("images","fig_simu_single_mainpost.png"), 
+# ggsave(file.path("figures","fig_simu_single_mainpost.png"), 
 #        fig_simu_single_b, width = 12, height = 4.8)
 fig_simu_single_b
 ```
@@ -967,7 +967,7 @@ fig_simu_single_b_supp <- ggarrange(fig_simu_single_b_tmp3,
             fig_simu_single_b_tmp6,
             ncol=1)
 
-# ggsave(file.path("images","fig_simu_single_mainpost_supp.png"), 
+# ggsave(file.path("figures","fig_simu_single_mainpost_supp.png"), 
 #        fig_simu_single_b_supp, width = 14, height = 14)
 
 fig_simu_single_b_supp
@@ -1067,7 +1067,7 @@ fig_simu_c <- df_inter_simp_tmp %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
   
-# ggsave(file.path("images","fig_simu_TypeI_inter.png"), fig_simu_c, width = 10, height = 4)
+# ggsave(file.path("figures","fig_simu_TypeI_inter.png"), fig_simu_c, width = 10, height = 4)
 fig_simu_c
 ```
 
@@ -1118,7 +1118,7 @@ fig_simu_c_supp <- df_inter_simp_tmp_supp %>%
         strip.placement = "outside",
         axis.title.x = element_blank())
   
-# ggsave(file.path("images","fig_simu_TypeI_inter_supp.png"), fig_simu_c_supp, width = 10, height = 4)
+# ggsave(file.path("figures","fig_simu_TypeI_inter_supp.png"), fig_simu_c_supp, width = 10, height = 4)
 fig_simu_c_supp
 ```
 
@@ -1212,7 +1212,7 @@ fig_simu <- ggarrange(fig_simu_a, fig_simu_b,
   ggarrange(fig_simu_c,
             nrow = 2, labels = c("", "c"))
 
-# ggsave(file.path("images","fig_simu.png"), fig_simu, width = 12, height = 8.4)
+# ggsave(file.path("figures","fig_simu.png"), fig_simu, width = 12, height = 8.4)
 fig_simu
 ```
 
@@ -1223,7 +1223,7 @@ fig_simu_single <- ggarrange(fig_simu_single_a, fig_simu_single_b,
    ggarrange(fig_simu_single_c,
             nrow = 2, labels = c("", "c"))
 
-# ggsave(file.path("images","fig_simu_single.png"), fig_simu_single, width = 12, height = 10)
+# ggsave(file.path("figures","fig_simu_single.png"), fig_simu_single, width = 12, height = 10)
 fig_simu_single
 ```
 
@@ -1255,7 +1255,7 @@ fig_simu_single_b_supp
 fig_simu_c_supp
 ```
 
-# Session information {.unlisted .unnumbered}
+# Session information {.unnumbered}
 ```{r}
 sessionInfo()
 ```
