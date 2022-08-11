@@ -1,0 +1,9 @@
+
+# Session information {.unnumbered}
+```{r}
+sessionInfo()
+```
+
+
+
+

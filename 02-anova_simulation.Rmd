@@ -1,30 +1,10 @@
----
-title: "ANOVA conventions may not work as you wish"
-author: "[Haiyang Jin](https://haiyangjin.github.io/) and Yuzhu Ji"
-date: "`r format(Sys.Date(), '%Y-%b-%d')`"
-output: 
-  html_document:
-    code_folding: hide
-    number_sections: true
-    toc: true
-    toc_depth: 4
-    toc_float: true
-    df_print: paged
----
 
-<style>
-pre {
-  overflow-x: auto;
-}
-pre code {
-  word-wrap: normal;
-  white-space: pre;
-}
-</style>
+# Simulations for false positive rates in ANOVA conventions
+Some texts.   
 
-# Preparations
+## Preparations
 
-```{r setup, include=FALSE}
+```{r setup2, include=FALSE}
 ## load libraries
 library(knitr)
 library(tidyverse)
@@ -54,14 +34,14 @@ custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F"
 ```
 
 
-# Simulating Type I error in ANOVA
+## Simulating Type I error in ANOVA
 
 ```{r}
 Nsim <- 10000 # number of simulation
 alphas <- c(0.001, 0.005, 0.01, 0.05, (1:4)/10)  # 0.001 ~ 0.4
 ```
 
-## ANOVA omnibus F-test
+### ANOVA omnibus F-test
 
 ```{r, message=F}
 p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16, 
@@ -69,7 +49,7 @@ p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16,
                       N_IV = 2:5)
 ```
 
-### FWER and CER
+#### FWER and CER
 
 ```{r}
 # Type I error rates in different situations
@@ -166,7 +146,7 @@ fig_simu_a_supp
 ```
 
 
-### Single tests
+#### Single tests
 
 ```{r}
 # with omnibus F-test and significant effect (uncorrected)
@@ -274,7 +254,7 @@ fig_simu_single_a_supp <- ggarrange(
 fig_simu_single_a_supp
 ```
 
-## Main effect and post-hoc analysis
+### Main effect and post-hoc analysis
 
 ```{r message=F}
 # sim_main_posthoc is available in R/funcs.R
@@ -283,7 +263,7 @@ p_main_posthoc <- sim_main_posthoc(N_subj = 30, iter = Nsim, n_core=16,
                                    N_levels = c(3,4,5,6)) 
 ```
 
-### FWER and CER
+#### FWER and CER
 ```{r}
 df_TypeI_posthoc <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
   group_by(N_level, alpha, adjust) %>% 
@@ -407,7 +387,7 @@ fig_simu_b_supp <- ggarrange(fig_simu_b_tmp3, fig_simu_b_tmp4,
 fig_simu_b_supp
 ```
 
-### Single tests
+#### Single tests
 
 ```{r}
 # with omnibus F-test and significant effect
@@ -522,14 +502,14 @@ fig_simu_single_b_supp
 ```
 
 
-## Interaction and simple effect analysis
+### Interaction and simple effect analysis
 
 ```{r, message=F}
 p_inter_simple <- sim_inter_simple(N_subj = 30, iter = Nsim, n_core=16, 
                                    file_cache = here::here("simulation", "p_inter_simple.rds"))
 ```
 
-### FWER and CER
+#### FWER and CER
 
 Type I error rates for main effects and interaction (when different correction methods were applied to the simple effect analysis):
 ```{r}
@@ -670,7 +650,7 @@ fig_simu_c_supp <- df_inter_simp_tmp_supp %>%
 fig_simu_c_supp
 ```
 
-### Single tests
+#### Single tests
 
 ```{r}
 # with significant interaction and uncorrected simple effects
@@ -749,9 +729,9 @@ fig_simu_single_c
 ```
 
 
-# Publication 
+## Publication 
 
-## Figure 2
+### Figure 2
 
 ```{r fig.width=10.5, fig.asp=0.7}
 fig_simu <- ggarrange(fig_simu_a, fig_simu_b,
@@ -776,10 +756,10 @@ fig_simu_single
 ```
 
 
-## Table 1
+### Table 1
 
 
-# Supplemenatry
+## Supplemenatry
 
 ```{r fig.width=13, fig.asp=0.4}
 fig_simu_a_supp
@@ -807,12 +787,4 @@ fig_simu_single_b_supp
 ```{r fig.width=10.5, fig.asp=0.35}
 fig_simu_c_supp
 ```
-
-# Session information {.unnumbered}
-```{r}
-sessionInfo()
-```
-
-
-
 

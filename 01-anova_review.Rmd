@@ -1,30 +1,10 @@
----
-title: "Reviewing ANOVA conventions in published articles"
-author: "[Haiyang Jin](https://haiyangjin.github.io/) and Yuzhu Ji"
-date: "`r format(Sys.Date(), '%Y-%b-%d')`"
-output: 
-  html_document:
-    code_folding: hide
-    number_sections: true
-    toc: true
-    toc_depth: 4
-    toc_float: true
-    df_print: paged
----
 
-<style>
-pre {
-  overflow-x: auto;
-}
-pre code {
-  word-wrap: normal;
-  white-space: pre;
-}
-</style>
+# Reviewing ANOVA conventions
+Some texts.  
 
-# Preparations
+## Preparations
 
-```{r setup, include=FALSE}
+```{r setup1, include=FALSE}
 ## load libraries
 library(tidyverse)
 library(vcd)
@@ -52,7 +32,7 @@ custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F"
 ```
 
 
-## Read data
+### Read data
 
 ```{r}
 # article ID and journal
@@ -128,10 +108,10 @@ df_mainscreen <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx")
 ```
 
 
-# Intra-rater consistency
+## Intra-rater consistency
 Estimate the intra-rater consistency for the information on whether the study employed ANOVA, experimental designs and the ANOVA prevalence inspected by Y.J. and H.J. separately.
 
-## Research article and ANOVA
+### Research article and ANOVA
 
 ```{r}
 # # whether it is a research article (unweighted)
@@ -167,7 +147,7 @@ print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
 ```
 
 
-## The first 120 articles
+### The first 120 articles
 
 ```{r}
 # experimental designs
@@ -248,9 +228,9 @@ print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
 #        max = max(kappa_df$value)) 
 ```
 
-# ANOVA prevalence
+## ANOVA prevalence
 
-## Screening information
+### Screening information
 
 ```{r}
 # number of articles included at each stage
@@ -306,14 +286,14 @@ df_excluded <- df_mainscreen %>%
 df_excluded
 ```
 
-## ANOVA prevalence
+### ANOVA prevalence
 ```{r}
 # The percentage of articles employing ANOVA among all research articles:  
 df_included %>% 
   mutate(prevalence_anova = round(In4_ANOVA/In3_research*100, 2))
 ```
 
-## ANOVA complexity
+### ANOVA complexity
 
 ```{r}
 # df_complex <- df_conv %>% 
@@ -357,9 +337,9 @@ alluvial figure (?) [left side is the experimental designs and the right side is
 #   summarize(count = n(), .groups="drop") 
 ```
 
-## ANOVA convention prevalence
+### ANOVA convention prevalence
 
-### Convention A: inspect all effects
+#### Convention A: inspect all effects
 ```{r}
 # df_conv_a <- df_conv %>% 
 #   filter(a2_multiway==1) %>% 
@@ -388,7 +368,7 @@ alluvial figure (?) [left side is the experimental designs and the right side is
 ```
 
 
-### Convention B: post-hoc
+#### Convention B: post-hoc
 ```{r}
 # df_conv_b <- df_conv %>% 
 #   filter(max_No_levels>2) %>% 
@@ -425,7 +405,7 @@ Multiple comparison corrections (per ANOVA)
 ```
 
 
-### Convention C: simple effect analysis
+#### Convention C: simple effect analysis
 ```{r}
 # df_conv_c <- df_conv %>% 
 #   filter(N_factor>1) %>% 
@@ -461,7 +441,7 @@ Multiple comparison corrections (per ANOVA)
 #   add_row(df_conv_c_adjust)
 ```
 
-### Convention D: separate 
+#### Convention D: separate 
 
 ```{r}
 # df_conv_de <- df_conv %>% 
@@ -484,7 +464,7 @@ Multiple comparison corrections (per ANOVA)
 #   add_row(df_conv_d_all) # add summary row
 ```
 
-### Convention E: combine 
+#### Convention E: combine 
 
 ```{r}
 # # 
@@ -501,12 +481,6 @@ Multiple comparison corrections (per ANOVA)
 #   group_by(journal) %>% 
 #   summarize(conE = mean(meanE_art)) %>% 
 #   add_row(df_conv_e_all) # add summary row
-```
-
-
-# Session information {.unnumbered}
-```{r}
-sessionInfo()
 ```
 
 
