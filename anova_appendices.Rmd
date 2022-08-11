@@ -3,12 +3,12 @@ title             : 'Appendices for "ANOVA conventions may not work as you wish"
 shorttitle         : "ANOVA conventions"
 
 author: 
-  - name: "Haiyang Jin"
+  - name: \addORCIDlink{Haiyang Jin}{0000-0003-3290-3901}
     affiliation: ""
     address: ""
     email: "haiyang.jin@outlook.com"
     corresponding: yes
-    
+
 affiliation:
   - id            : ""
     institution   : ""
@@ -25,24 +25,37 @@ mask              : false
 draft             : false
 floatsintext      : true
 
-documentclass     : "apa6"
 classoption       : "man"
 numbersections    : false
 link-citations    : true
-
-output:
-    # papaja::apa6_word:
-    #     toc: no
-    papaja::apa6_pdf:
-        toc: no
-        toc_depth: 3
-        highlight: default
-        latex_engine: xelatex
         
 date: "`r format(Sys.time(), '%d-%m-%Y')`"
 
-header-includes   :
-- \usepackage{sectsty} \allsectionsfont{\raggedright} # left-align H1 titles
+header-includes:
+  - |
+    \makeatletter
+    \renewcommand{\paragraph}{\@startsection{paragraph}{4}{\parindent}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-1em}%
+      {\normalfont\normalsize\bfseries\typesectitle}}
+    
+    \renewcommand{\subparagraph}[1]{\@startsection{subparagraph}{5}{1em}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-\z@\relax}%
+      {\normalfont\normalsize\bfseries\itshape\hspace{\parindent}{#1}\textit{\addperi}}{\relax}}
+    \makeatother
+
+csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
+documentclass     : "apa7"
+output            : 
+  # papaja::apa6_word: 
+  # toc: no
+  papaja::apa6_pdf:
+  toc: no
+  toc_depth: 3
+  highlight: default
+  latex_engine: xelatex
+
 bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/r-references.bib"]
 ---
 
