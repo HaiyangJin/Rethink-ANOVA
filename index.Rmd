@@ -1,0 +1,31 @@
+---
+title: "ANOVA conventions may not work as you expected"
+site: bookdown::bookdown_site
+author: "[Haiyang Jin](https://haiyangjin.github.io/) and Yuzhu Ji"
+date: "`r format(Sys.Date(), '%Y-%b-%d')`"
+
+output:
+  bookdown::gitbook: default
+  # html_document:
+  #   code_folding: hide
+  #   number_sections: true
+  #   toc: true
+  #   toc_depth: 4
+  #   toc_float: true
+  #   df_print: paged
+---
+
+# Introduction
+
+<style>
+pre {
+  overflow-x: auto;
+}
+pre code {
+  word-wrap: normal;
+  white-space: pre;
+}
+</style>
+
+This is the supplementary materials for "ANOVA conventions may not work as you expected.".
+
