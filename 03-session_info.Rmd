@@ -1,9 +1,12 @@
 
 # Session information {.unnumbered}
+
+In this project, we used `r papaja::cite_r('references/packages.bib')`.
+
 ```{r}
 sessionInfo()
 ```
 
 
-
+## Reference {.unnumbered}
 

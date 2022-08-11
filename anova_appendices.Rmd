@@ -56,8 +56,13 @@ output            :
   highlight: default
   latex_engine: xelatex
 
-bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/r-references.bib"]
+bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/packages.bib"]
+# rmarkdown::render("anova_appendices.Rmd", papaja::apa6_pdf())
 ---
+
+```{r, include=FALSE}
+knitr::write_bib(c(.packages(), "knitr", "rmarkdown"), file = 'references/packages.bib')
+```
 
 ```{r setup, include=FALSE}
 ## load libraries

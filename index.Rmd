@@ -4,6 +4,8 @@ site: bookdown::bookdown_site
 author: "[Haiyang Jin](https://haiyangjin.github.io/) and Yuzhu Ji"
 date: "`r format(Sys.Date(), '%Y-%b-%d')`"
 
+link-citations    : true
+
 output:
   bookdown::gitbook: default
   # html_document:
@@ -13,6 +15,9 @@ output:
   #   toc_depth: 4
   #   toc_float: true
   #   df_print: paged
+  
+bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/packages.bib"]
+
 ---
 
 # Introduction
