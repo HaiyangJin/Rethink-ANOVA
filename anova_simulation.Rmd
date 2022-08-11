@@ -113,7 +113,7 @@ fig_simu_a <- df_omni_cber %>%
                     breaks = levels(df_omni_cber$adjust)) + #,  
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
-  labs(x = "ANOVAs with two factors", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "ANOVAs with two factors", y = "False Positive Rate (%)", fill = "") +
   theme(legend.position = c(0.75, 0.6),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
@@ -147,7 +147,7 @@ for (i in unique(df_omni_cber$N_IV)) {
                         breaks = levels(df_omni_cber$adjust)) + #,  
       geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
       scale_y_continuous(limits = c(0, 84), expand = c(0, 0)) +
-      labs(x = paste0("ANOVAs with ", i, " factors"), y = "Type I Error Rate (%)", fill = "") +
+      labs(x = paste0("ANOVAs with ", i, " factors"), y = "False Positive Rate (%)", fill = "") +
       theme(legend.position = c(0.76, 0.6),
             axis.ticks.length = unit(.15, "cm"),
             axis.text.x = element_blank(),
@@ -219,7 +219,7 @@ fig_simu_single_a <- df_TypeI_single %>%
   scale_fill_manual(values = custom_clr[1:4]) +
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
-  labs(x = "ANOVAs with two factors", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "ANOVAs with two factors", y = "False Positive Rate (%)", fill = "") +
   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
   theme(legend.position = c(0.55, 0.87),
         legend.direction="horizontal",
@@ -252,7 +252,7 @@ for (i in unique(df_TypeI_single_plot$N_IV)) {
                                    brewer.pal(7, "Set2"), brewer.pal(8,"Set3"), brewer.pal(7,"Accent"))) + 
       geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
       scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
-      labs(x = paste0("ANOVAs with ", as.character(i), " factors"), y = "Type I Error Rate (%)", fill = "") +
+      labs(x = paste0("ANOVAs with ", as.character(i), " factors"), y = "False Positive Rate (%)", fill = "") +
       guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
       theme(legend.position = "none",
             # legend.direction="horizontal",
@@ -352,7 +352,7 @@ fig_simu_b <- df_posthoc_tmp %>%
                     breaks = levels(df_posthoc_tmp$adjust)) + #,  
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
-  labs(x = "One-way ANOVAs with four levels", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "One-way ANOVAs with four levels", y = "False Positive Rate (%)", fill = "") +
   theme(legend.position = c(0.74, 0.63),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
@@ -388,7 +388,7 @@ for (i in unique(df_posthoc_tmp$N_level)) {
                       breaks = levels(df_posthoc_tmp$adjust)) + #,  
     geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
     scale_y_continuous(limits = c(0, 45), expand = c(0, 0)) +
-    labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "Type I Error Rate (%)", fill = "") +
+    labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "False Positive Rate (%)", fill = "") +
     theme(legend.position = c(0.75, 0.6),
           axis.ticks.length = unit(.15, "cm"),
           axis.text.x = element_blank(),
@@ -460,7 +460,7 @@ fig_simu_single_b <- df_TypeI_main_single %>%
   scale_fill_manual(values = custom_clr) +
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
-  labs(x = "One-way ANOVAs with four levels", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "One-way ANOVAs with four levels", y = "False Positive Rate (%)", fill = "") +
   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
   theme(legend.position = c(0.5, 0.87),
         legend.direction="horizontal",
@@ -499,7 +499,7 @@ for (i in unique(df_TypeI_main_single$N_level)) {
                                    brewer.pal(6,"Set3"))) +
       geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
       scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
-      labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "Type I Error Rate (%)", fill = "") +
+      labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "False Positive Rate (%)", fill = "") +
       guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
       theme(legend.position = c(0.5, 0.88),
             legend.direction="horizontal",
@@ -607,7 +607,7 @@ fig_simu_c <- df_inter_simp_tmp %>%
                     breaks = levels(df_inter_simp_tmp$adjust)) + #,
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 18), expand = c(0, 0)) +
-  labs(x = "ANOVAs with 2 × 2 designs", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "ANOVAs with 2 × 2 designs", y = "False Positive Rate (%)", fill = "") +
   theme(legend.position = c(0.84, 0.65),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
@@ -658,7 +658,7 @@ fig_simu_c_supp <- df_inter_simp_tmp_supp %>%
                     breaks = levels(df_inter_simp_tmp$adjust)) + #,
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 18), expand = c(0, 0)) +
-  labs(x = "ANOVAs with 2 × 2 designs", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "ANOVAs with 2 × 2 designs", y = "False Positive Rate (%)", fill = "") +
   theme(legend.position = c(0.84, 0.65),
         axis.ticks.length = unit(.15, "cm"),
         axis.text.x = element_blank(),
@@ -736,7 +736,7 @@ fig_simu_single_c <- df_TypeI_inter_single %>%
   scale_fill_manual(values = custom_clr) +
   geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
   scale_y_continuous(limits = c(0, 7), expand = c(0, 0), breaks = 1:6) +
-  labs(x = "ANOVAs with 2 × 2 designs", y = "Type I Error Rate (%)", fill = "") +
+  labs(x = "ANOVAs with 2 × 2 designs", y = "False Positive Rate (%)", fill = "") +
   guides(fill=guide_legend(nrow=2,byrow=TRUE)) +
   theme(legend.position = c(0.5, 0.87),
         legend.direction="horizontal",
