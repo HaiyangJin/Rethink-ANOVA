@@ -1,11 +1,14 @@
 
 # Reviewing ANOVA conventions
-Some texts.  
+This section is the analysis of reviewing ANOVA prevalence and complexity, as well as the prevalence of ANOVA conventions.   
 
-## Preparations
+```{r include=FALSE}
+# bookdown::preview_chapter("01-anova_review.Rmd", "bookdown::html_document2") 
+```
 
-```{r setup1, include=FALSE}
-## load libraries
+Package loading and general settings:
+```{r setup1, message=FALSE}
+# load packages
 library(tidyverse)
 library(vcd)
 library(ggpubr)
@@ -23,20 +26,22 @@ knitr::opts_chunk$set(
 
 source(here::here("R", "funcs.R"))
 source(here::here("R", "func_kappa.R"))
+
+# colors used in figures
+two_colors <- c("#D55E00", "#56B4E9")
+custom_clr <- c("#7F7F7F", 
+                "#E64B35", "#56B4E9", "#DF8F44", 
+                "#008B45", "#925E9F", "#415384", 
+                "#000000")
+
 set.seed(2022)
 ```
 
-```{r}
-two_colors <- c("#D55E00", "#56B4E9")
-custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F", "#415384", "#000000")
-```
-
-
-### Read data
-
+<br>
+Only load paper IDs and the journals for later use:
 ```{r}
 # article ID and journal
-df_publ <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx"),
+df_publ <- readxl::read_excel(here::here("data", "CodingSheet.xlsx"),
                               sheet="PaperMeta",
                               range="A1:G750") %>%
   transmute(`Paper ID`, journal = `Publication Title`) %>% 
@@ -49,43 +54,762 @@ df_publ <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx"),
                               JESP="Journal of Experimental Social Psychology",
                               JPSP="Journal of Personality and Social Psychology"),
          journal = fct_relevel(journal, "JEPG", "Psych Sci", "J Abn Psych", "JCCP", "JESP", "JPSP")) 
+```
 
+
+## Intra-rater consistency
+
+Estimate the intra-rater consistency for the information on whether the study employed ANOVA, experimental designs and the ANOVA prevalence conventions inspected by Y.J. and H.J. separately.
+
+### Research article and ANOVA
+
+Load the data of title pre-screening and research articles:
+```{r}
 # "Title_Prescreening" Sheet
-df_prescreen <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx"),
+df_prescreen <- readxl::read_excel(here::here("data", "CodingSheet.xlsx"),
                                    sheet="Title_Prescreening",
                                    range="A1:C750") %>%
   left_join(df_publ, by="Paper ID") %>%
   select(-Title)
 
 # "ResearchPaper" Sheet
-df_mainscreen <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx"),
-                               sheet="ResearchPaper",
-                               range="A1:L750") %>%
+df_mainscreen <- readxl::read_excel(here::here("data", "CodingSheet.xlsx"),
+                                    sheet="ResearchPaper",
+                                    range="A1:L750") %>%
   left_join(df_publ, by="Paper ID") %>%
   select(-Title)
 ```
 
+<br>
+Calculate Cohen's Kappa of "whether it is a research article":
 ```{r}
-# read the coding sheet for the first round by YJ
-# df_conv_YJ1 <- readxl::read_excel(here::here("data", "CodingSheet_pilot.xlsx"), 
-#                                  sheet="AnalysisInfo_YJ",
-#                                  range="A1:AO39") %>% 
-#   select(-Title) 
-# 
-# # read the coding sheet for the first round by HJ
-# df_conv_HJ1 <- readxl::read_excel(here::here("data", "CodingSheet_pilot.xlsx"), 
-#                                  sheet="AnalysisInfo_HJ",
-#                                  range="A1:AO39") %>% 
-#   select(-Title) 
+# whether it is a research article (unweighted)
+df_res_K <- df_mainscreen %>%
+  select(`Research article_YJ`, `Research article_HJ`) %>%
+  group_by(`Research article_YJ`, `Research article_HJ`) %>%
+  summarize(count = n(), .groups = "drop") %>%
+  pivot_wider(names_from=`Research article_HJ`, values_from = count, values_fill = 0)
+
+Ka_res <- df_res_K %>%
+  select(-`Research article_YJ`) %>%
+  as.matrix() %>%
+  Kappa()
+
+print(Ka_res, CI=TRUE) # Kappa for research articles
+```
+
+<br>
+Calculate Cohen's Kappa of "whether ANOVA was used in the research articles":
+```{r}
+# whether ANOVA was used (unweighted)
+df_aov_K <- df_mainscreen %>% 
+  filter(`Research article`==1) %>% # only among research articles
+  select(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
+  group_by(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
+  summarize(count=n(), .groups="drop") %>% 
+  pivot_wider(names_from=`Use ANOVA_HJ`, values_from = count, values_fill = 0) 
+
+Ka_aov <- df_aov_K %>% 
+  select(-`Use ANOVA_YJ`) %>% 
+  as.matrix() %>% 
+  Kappa()
+
+print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
 ```
 
 
+### The first 120 articles
+
+When trying to estimate the consistency of analysis information for the first 20 articles in each journal, we realize that we may not identify the same number of ANOVAs for each experiment/article. Therefore, we add some un-preregistered analysis steps. Specifically, before evaluating the consistency for the ANOVA information, we count the number of ANOVAs identified by both Y.J. *and* H.J., and the number of ANOVAs only identified by Y.J. *or* H.J. We are unable to evaluate this consistency as there is no information on the number of analyses that are not identified as ANOVA by both Y.J. and H.J. Therefore, we will only display the above numbers without calculating Cohen's Kappa. Next, both Y.J. and H.J. re-reviewed these articles and the intra-rater consistency will be performed on the information after matching the numbers of identified ANOVAs for each article.
+
+#### With mismatched numbers of ANOVAs
+
+Load data for analysis information of the first 20 articles in each journal:
 ```{r}
-# # read the coding sheet for the first round (after resolving inconsistency)
-# df_conv_1 <- readxl::read_excel(here::here("data", "CodingSheet_pilot.xlsx"), 
-#                                  sheet="AnalysisInfo_1st",
-#                                  range="A1:AO39") %>% 
-#   select(-Title) 
+# read the coding sheet for the first round by YJ (before)
+df_conv_YJ1_before <- 
+  readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+                     sheet="AnalysisInfo_first20_YJ_before",
+                     range="A1:AR205") %>%
+  filter(!is.na(`Paper ID`)) %>% 
+  select(`Paper ID`, First20, Exp_ID, DV) %>% 
+  mutate(rater = "YJ")
+
+# read the coding sheet for the first round by HJ (before)
+df_conv_HJ1_before <- 
+  readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+                     sheet="AnalysisInfo_first20_HJ_before",
+                     range="A1:AR205") %>%
+  filter(!is.na(`Paper ID`)) %>% 
+  select(`Paper ID`, First20, Exp_ID, DV) %>% 
+  mutate(rater = "HJ")
+```
+
+<br>
+Contrast the number of ANOVAs identified by Y.J. and H.J.:
+```{r}
+df_conv_before <- bind_rows(df_conv_YJ1_before, df_conv_HJ1_before) %>% 
+  group_by(rater, `Paper ID`) %>% 
+  summarize(count = n(), .groups = "drop") %>% 
+  pivot_wider(names_from = rater, values_from = count, values_fill = 0) %>% 
+  mutate(diff = HJ-YJ,
+         YJ1_HJ1 = pmin(HJ, YJ),
+         YJ0_HJ1 = ifelse(diff>0, diff, 0),
+         YJ1_HJ0 = ifelse(diff<0, -diff, 0)) %>% 
+  arrange(as.numeric(str_remove(`Paper ID`, "P"))) 
+
+sum_conv_before <- df_conv_before %>% 
+  summarize(YJ1_HJ1 = sum(YJ1_HJ1),
+            YJ0_HJ1 = sum(YJ0_HJ1),
+            YJ1_HJ0 = sum(YJ1_HJ0))
+sum_conv_before 
+```
+
+<br>
+Since it may happen that when one rater identified 10 ANOVAs and the other identified 8 ANOVAs, only 7 of them were identical. In other words, the first and the second raters missed 1 and 3 ANOVAs, respectively. We additionally check this case for all articles with different numbers of ANOVAs identified by Y.J. and H.J. The numbers of identified ANOVA after corrections are: 
+```{r}
+cmatrix_first20_before <- tibble(
+  Rating = c("anova_HJ_1", "anova_HJ_0"),
+  anova_YJ_1 = c(sum_conv_before$YJ1_HJ1-1, sum_conv_before$YJ1_HJ0+1),
+  anova_YJ_0 = c(sum_conv_before$YJ0_HJ1+1, NA),
+)
+cmatrix_first20_before
+```
+
+
+#### After matching the number of ANOVAs in each article 
+
+Load analysis information after matching the number of ANOVAs in each article:
+```{r}
+# read the coding sheet for the first round by YJ (after)
+df_conv_YJ1_after <- 
+  readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+                     sheet="AnalysisInfo_first20_YJ_after",
+                     range="A1:AR205") %>%
+  filter(!is.na(`Paper ID`)) %>% 
+  select(-Title) %>% 
+  mutate(row_idx = c(2:205))
+
+# read the coding sheet for the first round by HJ (after)
+df_conv_HJ1_after <- 
+  readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+                     sheet="AnalysisInfo_first20_HJ_after",
+                     range="A1:AR205") %>%
+  filter(!is.na(`Paper ID`)) %>% 
+  select(-Title) %>% 
+  mutate(row_idx = c(2:205))
+```
+
+##### Experimental designs
+Cohen's Kappa for experimental designs:
+```{r}
+# experimental designs
+design_list <- c("N_factor", "max_No_levels")
+
+kappa_ed <- lapply(design_list, 
+                  thekappa, # available in R/func_kappa.R
+                  df1=df_conv_YJ1_after, 
+                  df2=df_conv_HJ1_after, 
+                  isweighted=TRUE) %>%
+  bind_rows()
+kappa_ed
+```
+
+##### Convention A
+Cohen's Kappa for convention A:
+```{r}
+# Convention A
+con_a_list <- c("a1_report_all", "a3_correction")
+
+kappa_a <- lapply(con_a_list, 
+                  thekappa, # available in R/func_kappa.R
+                  df1=filter(df_conv_YJ1_after, a2_multiway==1),
+                  df2=filter(df_conv_HJ1_after, a2_multiway==1)) %>%
+  bind_rows()
+kappa_a
+```
+
+<br> Confusion matrix for `a1_report_all`:
+```{r}
+as.data.frame(kappa_a$conf_mat[[1]])
+```
+
+<br>
+Rows with different information for `a1_report_all`:
+```{r}
+bind_cols(a1_report_all_YJ = df_conv_YJ1_after$a1_report_all,
+          df_conv_HJ1_after) %>%  
+  select(a1_report_all_YJ, 
+         a1_report_all_HJ = a1_report_all,
+         row_idx, `Paper ID`, Exp_ID, DV, a2_multiway, everything()) %>% 
+  filter(a1_report_all_YJ != a1_report_all_HJ,
+         a2_multiway==1)
+```
+
+<br> Confusion matrix for `a3_correction`:
+```{r}
+as.data.frame(kappa_a$conf_mat[[2]])
+```
+
+##### Convention B
+Main effect and post-hoc analysis.
+
+<br>
+Cohen's Kappa for convention B:
+```{r}
+# Convention B
+con_b_wlist <- 
+  c("b1_N_factor3+", # number of factors with three or more levels
+    "b2_N_significant_b1", # number of (reported) significant factors with three or more levels
+    "b3_N_non-sig_b1") # number of (reported) non-significant factors with three or more levels
+
+kappa_bw <- lapply(con_b_wlist, 
+                   thekappa, # available in R/func_kappa.R
+                   isweighted=TRUE,
+                   df1=filter(df_conv_YJ1_after, 
+                              max_No_levels>2), 
+                   df2=filter(df_conv_HJ1_after, 
+                              max_No_levels>2)) %>%
+  bind_rows()
+kappa_bw
+```
+
+<br> Confusion matrix for `b2_N_significant_b1`:
+```{r}
+as.data.frame(kappa_bw$conf_mat[[2]])
+```
+
+<br>
+Rows with different information on `b2_N_significant_b1`:
+```{r}
+bind_cols(b2_N_significant_b1_YJ = df_conv_YJ1_after$`b2_N_significant_b1`,
+          df_conv_HJ1_after) %>%  
+  filter(max_No_levels>2) %>% 
+  select(b2_N_significant_b1_YJ, 
+         b2_N_significant_b1_HJ = `b2_N_significant_b1`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(b2_N_significant_b1_YJ != b2_N_significant_b1_HJ)
+```
+
+<br> Confusion matrix for `b3_N_non-sig_b1`:
+```{r}
+as.data.frame(kappa_bw$conf_mat[[3]])
+```
+
+<br>
+Rows with different information on `b3_N_non-sig_b1`:
+```{r}
+bind_cols(`b3_N_non-sig_b1_YJ` = df_conv_YJ1_after$`b3_N_non-sig_b1`,
+          df_conv_HJ1_after) %>%  
+  filter(max_No_levels>2) %>% 
+  select(`b3_N_non-sig_b1_YJ`, 
+         `b3_N_non-sig_b1_HJ` = `b3_N_non-sig_b1`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(`b3_N_non-sig_b1_YJ` != `b3_N_non-sig_b1_HJ`)
+```
+
+<br><br>
+Only evaluate consistency of `b7_main_name` using the rows with consistent information in `con_b_wlist`:
+```{r}
+tmp_exclude_b1 <- c(186, 187) # rows with inconsistent information
+kappa_bu1 <- thekappa(
+  df1=filter(df_conv_YJ1_after, 
+             max_No_levels>2, 
+             !(row_idx %in% tmp_exclude_b1)),
+  df2=filter(df_conv_HJ1_after,
+             max_No_levels>2,
+             !(row_idx %in% tmp_exclude_b1)),
+  colname = "b7_main_name") # which factor was checked (1 denotes the only one; NA denotes 'not applicable')
+
+kappa_bu1
+```
+
+<br> Confusion matrix for `b7_main_name`:
+```{r}
+as.data.frame(kappa_bu1$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `b7_main_name`:
+```{r}
+bind_cols(`b7_main_name_YJ` = df_conv_YJ1_after$`b7_main_name`,
+          df_conv_HJ1_after) %>%  
+  filter(max_No_levels>2,
+         !(row_idx %in% tmp_exclude_b1)) %>% 
+  select(`b7_main_name_YJ`, 
+         `b7_main_name_HJ` = `b7_main_name`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(`b7_main_name_YJ` != `b7_main_name_HJ`)
+```
+
+<br><br>
+Only evaluate consistency of `b8_posthoc` using the rows with consistent information in `con_b_wlist` and `b7_main_name`:
+```{r}
+tmp_exclude_b2 <- c(186, 187, 199, 200) # rows with inconsistent information
+kappa_bu2 <- thekappa(
+  df1=filter(df_conv_YJ1_after, 
+             max_No_levels>2, 
+             b7_main_name != "NA",
+             !(row_idx %in% tmp_exclude_b2)),
+  df2=filter(df_conv_HJ1_after,
+             max_No_levels>2,
+             b7_main_name != "NA",
+             !(row_idx %in% tmp_exclude_b2)),
+  colname = "b8_posthoc") 
+
+kappa_bu2
+```
+
+<br> Confusion matrix for `b8_posthoc`:
+```{r}
+as.data.frame(kappa_bu2$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `b8_posthoc`:
+```{r}
+bind_cols(b8_posthoc_YJ = df_conv_YJ1_after$b8_posthoc,
+          df_conv_HJ1_after) %>%  
+  filter(max_No_levels>2, 
+         b7_main_name != "NA",
+         !(row_idx %in% tmp_exclude_b2)) %>% 
+  select(b8_posthoc_YJ, 
+         b8_posthoc_HJ = b8_posthoc,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(b8_posthoc_YJ != b8_posthoc_HJ)
+```
+
+<br><br>
+Only evaluate consistency of `b9_correction` using rows with consistent information in `con_b_wlist` and performed post-hoc analysis (`b8_posthoc==1`):
+```{r}
+tmp_exclude_b3 <- c(174, 186, 187, 199, 200) # rows with inconsistent information
+kappa_bu3 <- thekappa(
+  df1=filter(df_conv_YJ1_after, 
+             max_No_levels>2,
+             !(row_idx %in% tmp_exclude_b3),
+             b8_posthoc==1),
+  df2=filter(df_conv_HJ1_after,
+             max_No_levels>2,
+             !(row_idx %in% tmp_exclude_b3),
+             b8_posthoc==1),
+  colname = "b9_correction") 
+
+kappa_bu3
+```
+
+<br> 
+Confusion matrix for `b9_correction`:
+```{r}
+as.data.frame(kappa_bu3$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `b9_correction`:
+```{r}
+bind_cols(b9_correction_YJ = df_conv_YJ1_after$b9_correction,
+          df_conv_HJ1_after) %>%  
+  filter(max_No_levels>2,
+         !(row_idx %in% tmp_exclude_b3),
+         b8_posthoc==1) %>% 
+  select(b9_correction_YJ, 
+         b9_correction_HJ = b9_correction,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(b9_correction_YJ != b9_correction_HJ)
+```
+
+<br><br>
+Summary for Convention B:
+```{r}
+(kappa_b <- bind_rows(kappa_bw, kappa_bu1, kappa_bu2, kappa_bu3))
+```
+
+
+##### Convention C
+Interaction and simple effect analysis
+
+<br>
+Cohen's Kappa for convention C:
+```{r}
+# Convention C
+con_c_wlist <- c("c1_N_2way_inter", "c2_N_sig_in_c1", "c3_N_non-sig_in_c1")
+
+kappa_cw <- lapply(con_c_wlist, 
+                   thekappa, # available in R/func_kappa.R
+                   isweighted=TRUE,
+                   df1=filter(df_conv_YJ1_after, N_factor>1),
+                   df2=filter(df_conv_HJ1_after, N_factor>1)) %>%
+  bind_rows()
+
+kappa_cw
+```
+
+<br> 
+Confusion matrix for `c1_N_2way_inter`:
+```{r}
+as.data.frame(kappa_cw$conf_mat[[1]])
+```
+
+<br> 
+Confusion matrix for `c2_N_sig_in_c1`:
+```{r}
+as.data.frame(kappa_cw$conf_mat[[2]])
+```
+
+<br>
+Rows with different information on `c2_N_sig_in_c1`:
+```{r}
+bind_cols(c2_N_sig_in_c1_YJ = df_conv_YJ1_after$c2_N_sig_in_c1,
+          df_conv_HJ1_after) %>%  
+  filter(N_factor>1) %>% 
+  select(c2_N_sig_in_c1_YJ, 
+         c2_N_sig_in_c1_HJ = c2_N_sig_in_c1,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(c2_N_sig_in_c1_YJ != c2_N_sig_in_c1_HJ)
+```
+
+<br> 
+Confusion matrix for `c3_N_non-sig_in_c1`:
+```{r}
+as.data.frame(kappa_cw$conf_mat[[3]])
+```
+
+<br>
+Rows with different information on `c3_N_non-sig_in_c1`:
+```{r}
+bind_cols(`c3_N_non-sig_in_c1_YJ` = df_conv_YJ1_after$`c3_N_non-sig_in_c1`,
+          df_conv_HJ1_after) %>%  
+  filter(N_factor>1) %>% 
+  select(`c3_N_non-sig_in_c1_YJ`, 
+         `c3_N_non-sig_in_c1_HJ` = `c3_N_non-sig_in_c1`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(`c3_N_non-sig_in_c1_YJ` != `c3_N_non-sig_in_c1_HJ`)
+```
+
+<br><br>
+Only evaluate consistency of `c7_2way_name` using the rows with consistent information in `con_c_wlist`: 
+```{r}
+kappa_cu1 <- thekappa(df1=filter(df_conv_YJ1_after, 
+                                 N_factor>1),
+                      df2=filter(df_conv_HJ1_after, 
+                                 N_factor>1),
+                      colname = "c7_2way_name")
+kappa_cu1
+```
+
+<br> 
+Confusion matrix for `c7_2way_name`:
+```{r}
+as.data.frame(kappa_cu1$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `c7_2way_name`:
+```{r}
+diff_c7 <- bind_cols(c7_2way_name_YJ = df_conv_YJ1_after$c7_2way_name,
+                     df_conv_HJ1_after) %>%  
+  filter(N_factor > 1) %>% 
+  select(c7_2way_name_YJ, 
+         c7_2way_name_HJ = c7_2way_name,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(tolower(c7_2way_name_YJ) != tolower(c7_2way_name_HJ))
+diff_c7
+```
+
+<br><br>
+Only evaluate consistency of `c8_simple_effect` using the rows with consistent information in `con_c_wlist` and checked main effects (`c7_2way_name != "NA"`):
+```{r}
+tmp_exclude_c2 <- diff_c7$row_idx
+
+kappa_cu2 <- thekappa(
+  df1=filter(df_conv_YJ1_after, 
+             N_factor>1,
+             c7_2way_name != "NA",
+             !(row_idx %in% tmp_exclude_c2)),
+  df2=filter(df_conv_HJ1_after, 
+             N_factor>1,
+             c7_2way_name != "NA",
+             !(row_idx %in% tmp_exclude_c2)),
+  colname = "c8_simple_effect")
+
+kappa_cu2
+```
+
+<br> 
+Confusion matrix for `c8_simple_effect`:
+```{r}
+as.data.frame(kappa_cu2$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `c8_simple_effect`:
+```{r}
+diff_c8 <- bind_cols(c8_simple_effect_YJ = df_conv_YJ1_after$c8_simple_effect,
+                     df_conv_HJ1_after) %>%  
+  filter(N_factor>1,
+         c7_2way_name != "NA",
+         !(row_idx %in% tmp_exclude_c2)) %>% 
+  select(c8_simple_effect_YJ, 
+         c8_simple_effect_HJ = c8_simple_effect,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(c8_simple_effect_YJ != c8_simple_effect_HJ)
+
+diff_c8
+```
+
+<br><br>
+Only evaluate consistency of `c9_correction` using the rows with consistent information in `con_c_wlist` and performed simple effect analysis (`c8_simple_effect==1`):
+```{r}
+tmp_exclude_c3 <- c(diff_c7$row_idx, diff_c8$row_idx)
+
+kappa_cu3 <- thekappa(
+  df1=filter(df_conv_YJ1_after,
+             N_factor>1,
+             c8_simple_effect==1,
+             !(row_idx %in% tmp_exclude_c3)),
+  df2=filter(df_conv_HJ1_after, 
+             N_factor>1,
+             c8_simple_effect==1,
+             !(row_idx %in% tmp_exclude_c2)),
+  colname = "c9_correction")
+
+kappa_cu3
+```
+
+<br> 
+Confusion matrix for `c9_correction`:
+```{r}
+as.data.frame(kappa_cu3$conf_mat[[1]])
+```
+
+<br>
+Rows with different information on `c9_correction`:
+```{r}
+bind_cols(c9_correction_YJ = df_conv_YJ1_after$c9_correction,
+          df_conv_HJ1_after) %>%  
+  filter(N_factor>1,
+         c8_simple_effect==1,
+         !(row_idx %in% tmp_exclude_c2)) %>% 
+  select(c9_correction_YJ, 
+         c9_correction_HJ = c9_correction,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(c9_correction_YJ != c9_correction_HJ) 
+```
+
+<br><br>
+Summary for Convention C:
+```{r}
+(kappa_c <- bind_rows(kappa_cw, kappa_cu1, kappa_cu2, kappa_cu3))
+```
+
+
+##### Convention D and E
+Separate or collapse factors and perform more ANOVAs depending on the statistical significance of a higher-level interaction.
+
+Cohen's Kappa for the significance of the highest-level interaction:
+```{r}
+# Convention D & E
+kappa_d1e1 <- thekappa(df1=filter(df_conv_YJ1_after, 
+                                  N_factor>2),
+                       df2=filter(df_conv_HJ1_after, 
+                                  N_factor>2),
+                       colname="d1_e1_highest_sig")
+kappa_d1e1
+```
+
+<br> 
+Confusion matrix for `d1_e1_highest_sig`:
+```{r}
+as.data.frame(kappa_d1e1$conf_mat[[1]])
+```
+
+<br>
+Rows with different information for `d1_e1_highest_sig`:
+```{r}
+bind_cols(d1_e1_highest_sig_YJ = df_conv_YJ1_after$d1_e1_highest_sig,
+          df_conv_HJ1_after) %>%  
+  filter(N_factor > 2) %>% 
+  select(d1_e1_highest_sig_YJ, 
+         d1_e1_highest_sig_HJ = d1_e1_highest_sig,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(d1_e1_highest_sig_YJ != d1_e1_highest_sig_HJ)
+```
+
+Cohen's Kappa for Convention D and E:
+```{r}
+# separate one factor (for significant higher-level interaction)
+kappa_d <- thekappa(df1=filter(df_conv_YJ1_after, 
+                               N_factor>2, 
+                               d1_e1_highest_sig==1,
+                               !(row_idx %in% 135)),
+                    df2=filter(df_conv_HJ1_after, 
+                               N_factor>2, 
+                               d1_e1_highest_sig==1,
+                               !(row_idx %in% 135)),
+                    colname="d1_separate")
+
+# combine/collapse one factor (for non-significant higher-level interaction)
+kappa_e <- thekappa(df1=filter(df_conv_YJ1_after, 
+                               N_factor>2, 
+                               d1_e1_highest_sig==0,
+                               !(row_idx %in% 135)),
+                    df2=filter(df_conv_HJ1_after, 
+                               N_factor>2, 
+                               d1_e1_highest_sig==0,
+                               !(row_idx %in% 135)),
+                    colname="e1_combine")
+
+bind_rows(kappa_d, kappa_e)
+```
+
+<br> 
+Confusion matrix for `d1_separate`:
+```{r}
+as.data.frame(kappa_d$conf_mat[[1]])
+```
+
+<br> 
+Confusion matrix for `e1_combine`:
+```{r}
+as.data.frame(kappa_e$conf_mat[[1]])
+```
+
+<br>
+Rows with different information for `e1_combine`:
+```{r}
+bind_cols(e1_combine_YJ = df_conv_YJ1_after$e1_combine,
+          df_conv_HJ1_after) %>%  
+  filter(N_factor > 2,
+         d1_e1_highest_sig==0,
+         !(row_idx %in% 135)) %>% 
+  select(e1_combine_YJ, 
+         e1_combine_HJ = e1_combine,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(e1_combine_YJ != e1_combine_HJ)
+```
+
+<br><br>
+Summary for Convnetion D and E:
+```{r}
+(kappa_de <- bind_rows(kappa_d1e1, kappa_d, kappa_e))
+```
+
+
+##### Other information
+
+Cohen's Kappa for simple interaction analysis:
+```{r}
+kappa_o1 <- thekappa(df1=df_conv_YJ1_after,
+                     df2=df_conv_HJ1_after,
+                     colname="Simple interaction analysis (appliable?)")
+
+kappa_o2 <- thekappa(df1=filter(df_conv_YJ1_after, 
+                                `Simple interaction analysis (appliable?)`==1),
+                     df2=filter(df_conv_HJ1_after, 
+                                `Simple interaction analysis (appliable?)`==1),
+                     colname="Simple interaction analysis (applied?)")
+
+bind_rows(kappa_o1, kappa_o2)
+```
+
+<br> 
+Confusion matrix for `Simple interaction analysis (appliable?)`:
+```{r}
+as.data.frame(kappa_o1$conf_mat[[1]])
+```
+
+<br> 
+Confusion matrix for `Simple interaction analysis (applied?)`:
+```{r}
+as.data.frame(kappa_o2$conf_mat[[1]])
+```
+
+<br>
+Rows with different information for `Simple interaction analysis (applied?)` when it is applicable:
+```{r}
+bind_cols(applied_YJ = df_conv_YJ1_after$`Simple interaction analysis (applied?)`,
+          df_conv_HJ1_after) %>%  
+  filter(`Simple interaction analysis (appliable?)`==1) %>% 
+  select(applied_YJ, 
+         applied_HJ = `Simple interaction analysis (applied?)`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(applied_YJ != applied_HJ)
+```
+
+Cohen's Kappa for pre-registration information:
+```{r}
+olist <- c("Pre-registration", 
+           "Registered reports")
+
+kappa_o3 <- lapply(olist, 
+                  thekappa, # available in R/func_kappa.R
+                  df1=df_conv_YJ1_after,
+                  df2=df_conv_HJ1_after) %>%
+  bind_rows()
+
+kappa_o3
+```
+
+<br> 
+Confusion matrix for `Pre-registration`:
+```{r}
+as.data.frame(kappa_o3$conf_mat[[1]])
+```
+
+<br>
+Rows with different information for `Pre-registration`:
+```{r}
+bind_cols(`Pre-registration_YJ` = df_conv_YJ1_after$`Pre-registration`,
+          df_conv_HJ1_after) %>%  
+  select(`Pre-registration_YJ`, 
+         `Pre-registration_HJ` = `Pre-registration`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(`Pre-registration_YJ` != `Pre-registration_HJ`)
+```
+
+<br> 
+Confusion matrix for `Registered reports`:
+```{r}
+as.data.frame(kappa_o3$conf_mat[[2]])
+```
+
+Rows with different information for `Registered reports`:
+```{r}
+bind_cols(`Registered reports_YJ` = df_conv_YJ1_after$`Registered reports`,
+          df_conv_HJ1_after) %>%  
+  select(`Registered reports_YJ`, 
+         `Registered reports_HJ` = `Registered reports`,
+         row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
+  filter(`Registered reports_YJ` != `Registered reports_HJ`)
+```
+
+<br><br>
+Summary for other information:
+```{r}
+(kappa_o <- bind_rows(kappa_o1, kappa_o2, kappa_o3))
+```
+
+##### Summary consistency for ANOVA conventions
+```{r}
+(kappa_df <- bind_rows(kappa_ed, kappa_a, kappa_b, kappa_c, kappa_de, kappa_o))
+```
+Descriptive statistics of the consistency:
+```{r}
+# the mean consistency
+tibble(mean = mean(kappa_df$value),
+       min = min(kappa_df$value),
+       max = max(kappa_df$value))
+```
+
+
+## Prevalence of ANOVA and the conventions
+
+Load analysis information of all reviewed ANOVAs:
+```{r}
+# read the coding sheet for the first round (after resolving inconsistency)
+# df_conv_1 <- readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+#                                  sheet="AnalysisInfo_first20",
+#                                  range="A1:AR205") %>%
+#   select(-Title)
 # # read the coding sheet for the second round by YJ
 # df_conv_YJ2 <- readxl::read_excel(here::here("data", "CodingSheet_pilot.xlsx"), 
 #                                  sheet="AnalysisInfo_2nd_YJ",
@@ -108,130 +832,9 @@ df_mainscreen <- readxl::read_excel(here::here("data", "CodingSheet_anova.xlsx")
 ```
 
 
-## Intra-rater consistency
-Estimate the intra-rater consistency for the information on whether the study employed ANOVA, experimental designs and the ANOVA prevalence inspected by Y.J. and H.J. separately.
-
-### Research article and ANOVA
-
-```{r}
-# # whether it is a research article (unweighted)
-df_res_K <- df_mainscreen %>%
-  select(`Research article_YJ`, `Research article_HJ`) %>%
-  group_by(`Research article_YJ`, `Research article_HJ`) %>%
-  summarize(count = n(), .groups = "drop") %>%
-  pivot_wider(names_from=`Research article_HJ`, values_from = count, values_fill = 0)
-
-Ka_res <- df_res_K %>%
-  select(-`Research article_YJ`) %>%
-  as.matrix() %>%
-  Kappa()
-
-print(Ka_res, CI=TRUE) # Kappa for research articles
-```
-
-```{r}
-# whether ANOVA was used (unweighted)
-df_aov_K <- df_mainscreen %>% 
-  filter(`Research article`==1) %>% # only among research articles
-  select(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
-  group_by(`Use ANOVA_YJ`, `Use ANOVA_HJ`) %>% 
-  summarize(count=n(), .groups="drop") %>% 
-  pivot_wider(names_from=`Use ANOVA_HJ`, values_from = count, values_fill = 0) 
-
-Ka_aov <- df_aov_K %>% 
-  select(-`Use ANOVA_YJ`) %>% 
-  as.matrix() %>% 
-  Kappa()
-
-print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
-```
-
-
-### The first 120 articles
-
-```{r}
-# experimental designs
-# design_list <- c("N_factor", "max_No_levels")
-# 
-# kappa_0 <- lapply(design_list, thekappa, df1=df_conv_YJ1, df2=df_conv_HJ1, isweighted=TRUE) %>% 
-#   bind_rows()
-```
-
-```{r}
-# Convention A
-# con_a_list <- c("a1_report_all", "a3_correction")
-# 
-# kappa_a <- lapply(con_a_list, thekappa, 
-#                   df1=filter(df_conv_YJ1, a2_multiway==1), 
-#                   df2=filter(df_conv_HJ1, a2_multiway==1)) %>% 
-#   bind_rows()
-```
-
-```{r}
-# Convention B
-# con_b_wlist <- c("b1_N_factor3+", "b2_N_significant_b1")
-# con_b_ulist <- c("b7_posthoc", "b8_correction")
-# 
-# kappa_bw <- lapply(con_b_wlist, thekappa, isweighted=TRUE,
-#                    df1=filter(df_conv_YJ1, max_No_levels>2), 
-#                    df2=filter(df_conv_HJ1, max_No_levels>2)) %>% 
-#   bind_rows()
-# 
-# kappa_bu <- lapply(con_b_ulist, thekappa, 
-#                    df1=filter(df_conv_YJ1, max_No_levels>2), 
-#                    df2=filter(df_conv_HJ1, max_No_levels>2)) %>% 
-#   bind_rows()
-# kappa_b <- bind_rows(kappa_bw, kappa_bu)
-```
-
-```{r}
-# Convention C
-# con_c_wlist <- c("c1_N_2way_inter", "c2_N_sig_in_c1")
-# con_c_ulist <- c("c7_simple_effect", "c8_correction")
-# 
-# kappa_cw <- lapply(con_c_wlist, thekappa, isweighted=TRUE,
-#                    df1=filter(df_conv_YJ1, N_factor>1), 
-#                    df2=filter(df_conv_HJ1, N_factor>1)) %>% 
-#   bind_rows()
-# 
-# kappa_cu <- lapply(con_c_ulist, thekappa, 
-#                    df1=filter(df_conv_YJ1, N_factor>1), 
-#                    df2=filter(df_conv_HJ1, N_factor>1)) %>% 
-#   bind_rows()
-# kappa_c <- bind_rows(kappa_cw, kappa_cu)
-```
-
-```{r}
-# Convention D & E
-# kappa_d1e1 <- thekappa(df1=filter(df_conv_YJ1, N_factor>2), 
-#                     df2=filter(df_conv_HJ1, N_factor>2),
-#                     colname="d1_e1_highest_sig")
-# # kappa_d <- thekappa(df1=filter(df_conv_YJ1, N_factor>2, d1_e1_highest_sig==1), 
-# #                     df2=filter(df_conv_HJ1, N_factor>2, d1_e1_highest_sig==1),
-# #                     colname="d1_separate")
-# kappa_e <- thekappa(df1=filter(df_conv_YJ1, N_factor>2, d1_e1_highest_sig==0), 
-#                     df2=filter(df_conv_HJ1, N_factor>2, d1_e1_highest_sig==0),
-#                     colname="e1_combine")
-# 
-# # kappa_de <- bind_rows(kappa_d1e1, kappa_d, kappa_e)
-# kappa_de <- bind_rows(kappa_d1e1, kappa_e)
-```
-
-```{r}
-# (kappa_df <- bind_rows(kappa_0, kappa_a, kappa_b, kappa_c, kappa_de))
-```
-
-```{r}
-# the mean consistency
-# tibble(mean = mean(kappa_df$value),
-#        min = min(kappa_df$value),
-#        max = max(kappa_df$value)) 
-```
-
-## ANOVA prevalence
-
 ### Screening information
 
+Articles included at each stage:
 ```{r}
 # number of articles included at each stage
 df_included_all <- df_mainscreen %>%  
@@ -254,6 +857,7 @@ df_included <- df_mainscreen %>%
 df_included
 ```
 
+The percentage of included articles:
 ```{r}
 # Percentage (relative to the total number of articles)
 df_included %>% 
@@ -264,7 +868,7 @@ df_included %>%
             In5_include = paste0(round((In5_include/In1_all)*100, 2), '%'))
 ```
 
-
+The number of excluded articles at each stage:
 ```{r}
 # number of articles excluded at different stages
 df_excluded <- df_mainscreen %>% 
@@ -287,6 +891,7 @@ df_excluded
 ```
 
 ### ANOVA prevalence
+The prevalence of ANOVAs:
 ```{r}
 # The percentage of articles employing ANOVA among all research articles:  
 df_included %>% 
@@ -296,10 +901,11 @@ df_included %>%
 ### ANOVA complexity
 
 ```{r}
-# df_complex <- df_conv %>% 
-#   filter(included==1) %>% 
+# df_complex <- df_conv %>%
+#   filter(included==1) %>%
 #   transmute(`Paper ID`, N_factor, max_No_levels, Design,
 #             Design_int = str_split(Design, "_"),
+#             Max_level = sapply(Design_int, function(x){max(as.numeric(x))}),
 #             Avg_No_levels = sapply(Design_int, function(x){mean(as.numeric(x))}),
 #             Complexity = sapply(Design_int, function(x){prod(as.numeric(x))}),
 #             journal)

@@ -7,21 +7,24 @@ date: "`r format(Sys.Date(), '%Y-%b-%d')`"
 link-citations    : true
 
 output:
-  bookdown::gitbook: default
-  # html_document:
-  #   code_folding: hide
-  #   number_sections: true
-  #   toc: true
-  #   toc_depth: 4
-  #   toc_float: true
-  #   df_print: paged
+  # bookdown::gitbook: default
+  html_document:
+    code_folding: hide
+    number_sections: true
+    toc: true
+    toc_depth: 4
+    toc_float: true
+    df_print: paged
   
-bibliography: ["`r rbbt::bbt_write_bib('references/references.bib', overwrite = TRUE)`", "references/packages.bib"]
+bibliography: 
+  - "references/references.bib"
+  - "references/packages.bib"
 
 ---
 
-# Introduction
+# Preface {.unnumbered}
 
+```{=html}
 <style>
 pre {
   overflow-x: auto;
@@ -31,6 +34,7 @@ pre code {
   white-space: pre;
 }
 </style>
+```
 
-This is the supplementary materials for "ANOVA conventions may not work as you expected.".
+This is the analysis codes used in the project of "ANOVA conventions may not work as you expected."
 
