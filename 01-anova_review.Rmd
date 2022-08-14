@@ -274,6 +274,11 @@ kappa_bw <- lapply(con_b_wlist,
 kappa_bw
 ```
 
+<br> Confusion matrix for `b1_N_factor3+`:
+```{r}
+as.data.frame(kappa_bw$conf_mat[[1]])
+```
+
 <br> Confusion matrix for `b2_N_significant_b1`:
 ```{r}
 as.data.frame(kappa_bw$conf_mat[[2]])
@@ -370,9 +375,9 @@ Rows with different information on `b8_posthoc`:
 ```{r}
 bind_cols(b8_posthoc_YJ = df_conv_YJ1_after$b8_posthoc,
           df_conv_HJ1_after) %>%  
-  filter(max_No_levels>2, 
+  filter(max_No_levels>2,
          b7_main_name != "NA",
-         !(row_idx %in% tmp_exclude_b2)) %>% 
+         !(row_idx %in% tmp_exclude_b2)) %>%
   select(b8_posthoc_YJ, 
          b8_posthoc_HJ = b8_posthoc,
          row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
@@ -460,7 +465,7 @@ Rows with different information on `c2_N_sig_in_c1`:
 ```{r}
 bind_cols(c2_N_sig_in_c1_YJ = df_conv_YJ1_after$c2_N_sig_in_c1,
           df_conv_HJ1_after) %>%  
-  filter(N_factor>1) %>% 
+  filter(N_factor>1) %>%
   select(c2_N_sig_in_c1_YJ, 
          c2_N_sig_in_c1_HJ = c2_N_sig_in_c1,
          row_idx, `Paper ID`, Exp_ID, DV, Design, everything()) %>% 
@@ -806,10 +811,10 @@ tibble(mean = mean(kappa_df$value),
 Load analysis information of all reviewed ANOVAs:
 ```{r}
 # read the coding sheet for the first round (after resolving inconsistency)
-# df_conv_1 <- readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
-#                                  sheet="AnalysisInfo_first20",
-#                                  range="A1:AR205") %>%
-#   select(-Title)
+df_conv_1 <- readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
+                                 sheet="AnalysisInfo_first20",
+                                 range="A1:AR205") %>%
+  select(-Title)
 # # read the coding sheet for the second round by YJ
 # df_conv_YJ2 <- readxl::read_excel(here::here("data", "CodingSheet_pilot.xlsx"), 
 #                                  sheet="AnalysisInfo_2nd_YJ",
