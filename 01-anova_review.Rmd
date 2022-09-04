@@ -815,7 +815,8 @@ Load analysis information of all reviewed ANOVAs:
 df_conv <- bind_rows(
   readxl::read_excel(here::here("data", "CodingSheet_first20.xlsx"),
                      sheet="AnalysisInfo_first20",
-                     range="A1:AR205"), 
+                     range="A1:AR205") %>% 
+    mutate(c6_inter_sig = as.character(c6_inter_sig)), 
   readxl::read_excel(here::here("data", "CodingSheet.xlsx"),
                      sheet="AnalysisInfo_1",
                      range="A1:AR504"),
@@ -845,7 +846,6 @@ df_conv <- bind_rows(
          `c3_N_non-sig_in_c1` = as.integer(`c3_N_non-sig_in_c1`),
          c4_which_sig_inter = as.integer(c4_which_sig_inter),
          c5_which_nonsig_inter = as.integer(c5_which_nonsig_inter),
-         c6_inter_sig = as.integer(c6_inter_sig),
          c8_simple_effect = as.integer(c8_simple_effect),
          c9_correction = as_factor(c9_correction),
          d1_e1_highest_sig = as.integer(d1_e1_highest_sig),
@@ -934,9 +934,10 @@ df_included %>%
 ```{r}
 df_complex <- df_conv %>%
   filter(included==1) %>%
-  transmute(`Paper ID`, N_factor, max_No_levels, 
+  transmute(`Paper ID`, 
             Design_int = str_split(Design, "_"),
             Design = sapply(Design_int, function(x){paste(sort(as.numeric(x), decreasing=T), collapse="_")}),
+            N_factor = sapply(Design_int, function(x){length(as.numeric(x))}),
             Max_level = sapply(Design_int, function(x){max(as.numeric(x))}),
             Avg_No_levels = sapply(Design_int, function(x){mean(as.numeric(x))}),
             Complexity = sapply(Design_int, function(x){prod(as.numeric(x))}),
@@ -948,136 +949,290 @@ Across ANOVAs:
 df_complex %>%
   group_by(journal) %>%
   summarize(mean_N_factor = mean(N_factor),
-            mean_max_N_levels = mean(max_No_levels),
+            mean_max_N_levels = mean(Max_level),
             mean_complexity = mean(Complexity)) %>%
   add_row( # add summary row
     summarize(df_complex,
-              journal = "All",
+              journal = "Overall",
               mean_N_factor = mean(N_factor),
-              mean_max_N_levels = mean(max_No_levels),
-              mean_complexity = mean(Complexity)))
+              mean_max_N_levels = mean(Max_level),
+              mean_complexity = mean(Complexity)),
+    .before = 1)
 ```
 
-```{r}
-plot_design <- df_complex %>%
-  mutate(design_ = str_replace_all(Design, '_', '*')) %>%
-  ggplot(aes(x = reorder(design_, Complexity))) +
-  geom_histogram(stat="count") +
-  facet_grid(rows=vars(N_factor), scales = "free") +
-  labs(x = "Experimental designs")
+```{r fig.width=10, fig.asp=.5, warning=FALSE}
+for (iN in 1:4) {
+  
+  tmpplot <- df_complex %>%
+    filter(N_factor == iN) %>% 
+    mutate(design_ = str_replace_all(Design, '_', '*')) %>%
+    ggplot(aes(x = reorder(design_, Complexity))) +
+    geom_histogram(stat="count") +
+    scale_y_continuous(expand = c(0, 0)) +
+    # facet_wrap(vars(N_factor), scales = "free", ncol=2) +
+    labs(x = "Experimental designs") 
+  
+  if (iN!=1){
+    tmpplot <- tmpplot +
+      theme(axis.text.x = element_text(angle = 45, hjust=.75))
+  }
+  
+  assign(paste0("plot_design", iN), tmpplot)
+}
+
+plot_design12 <- ggarrange(plot_design1, plot_design2,
+                         widths = c(3, 7))
+plot_design34 <- ggarrange(plot_design3, plot_design4,
+                         widths = c(7.5, 2.5))
+plot_design <- ggarrange(plot_design12, plot_design34, 
+                         nrow=2, heights = c(1, 1.1))
 plot_design
 ```
 
-alluvial figure (?) [left side is the experimental designs and the right side is the numbers of conditions.]
+#### Alluvial figure 
+Information used to created the Alluvial figure at https://sankeymatic.com/build/ to display the ANOVA complexity.
 ```{r}
-# df_complex %>% 
-#   select(Design, Complexity) %>% 
-#   group_by(Design, Complexity) %>% 
-#   summarize(count = n(), .groups="drop") 
+# frequency of factor numbers
+df_complex %>% 
+  group_by(N_factor) %>% 
+  summarize(count = n())
 ```
+
+```{r}
+# frequency of each design
+df_complex %>%
+  select(N_factor, Design) %>%
+  group_by(N_factor, Design) %>%
+  summarize(count = n(), .groups="drop") %>% 
+  arrange(N_factor, desc(count))
+```
+
+```{r}
+# Frequency of each "complexity" (i.e., the total number of levels)
+df_complex %>%
+  select(Design, Complexity) %>%
+  group_by(Complexity, Design) %>%
+  summarize(count = n(), .groups="drop")
+```
+
+```{r}
+knitr::include_graphics(file.path("figures", "anova_complexity_2400_1400.png"))
+```
+
 
 ### ANOVA convention prevalence
 
 #### Convention A: inspect all effects
+
 ```{r}
 df_conv_a <- df_conv %>%
   filter(a2_multiway==1) %>%
   select(`Paper ID`, starts_with("a"), journal)
-
-# percentage of ANOVAs reporting/inspecting all effects among multi-way ANOVA
-df_conv_a_all <- summarize(df_conv_a,
-                           journal = "All",
-                           conA = mean(a1_report_all))
-
-df_conv_a %>%
-  group_by(journal) %>%
-  summarize(conA = mean(a1_report_all)) %>%
-  add_row(df_conv_a_all) # add summary row
 ```
 
-```{r}
-df_conv_a_adjust <- df_conv_a %>%
-  group_by(a3_correction) %>%
-  summarize(journal = "All", count = n())
+##### Per research article
 
+```{r}
+df_conv_a_article <- df_conv_a %>% 
+  group_by(journal, `Paper ID`) %>% 
+  summarize(a1_per_article = mean(a1_report_all), .groups = "drop") 
+
+df_conv_a_article %>%
+  group_by(journal) %>%
+  summarize(conA = mean(a1_per_article), count=n()) %>%
+  add_row(summarize(df_conv_a_article,
+                    journal = "Overall",
+                    conA = mean(a1_per_article),
+                    count=n()),
+          .before=1) # add summary row
+```
+Results showed about 71.37% research articles reported the results of all (significant) main effects and interaction in the ANOVA.
+
+##### Apply corrections (per ANOVA)
+
+```{r}
+# percentage of ANOVAs reporting/inspecting all effects among multi-way ANOVA
+# (without averaging per research article)
+df_conv_a %>%
+  group_by(journal) %>%
+  summarize(conA = mean(a1_report_all), count=n()) %>%
+  add_row(summarize(df_conv_a,
+                    journal = "Overall",
+                    conA = mean(a1_report_all),
+                    count=n()),
+          .before=1) # add summary row
+```
+On average, 74.31% of the inspected multi-way ANOVAs reported the results of all effects (at least those statistically significant ones). Notably, only a few of the remaining articles reported the effects of only one effect (although they did not report all).  
+
+<br>
+Whether any correction method was applied (per ANOVA):
+```{r}
 df_conv_a %>%
   group_by(journal, a3_correction) %>%
   summarize(count = n(), .groups="drop") %>%
-  add_row(df_conv_a_adjust)
+  add_row(df_conv_a %>%
+            group_by(a3_correction) %>%
+            summarize(journal = "Overall", count = n()),
+          .before=1)
 ```
-
+Result show that no correction method (e.g., omnibus F-test or Bonferroni) was applied in any reviewed multi-way ANOVA.
 
 #### Convention B: post-hoc
 ```{r}
 df_conv_b <- df_conv %>%
-  filter(max_No_levels>2) %>%
-  select(`Paper ID`, max_No_levels, starts_with("b"), journal)
+  filter(max_No_levels>2,
+         b6_main_effect_sig != -1) %>% # only include articles reporting the main effect
+  select(`Paper ID`, max_No_levels, starts_with("b"), journal) %>% 
+  mutate(isConB = b6_main_effect_sig == b8_posthoc) 
+```
 
+##### Per research article
+```{r}
 # percentage of (not) performing post-hoc analysis when the main effect is (not) significant
 df_conv_b_artile <- df_conv_b %>%
-  mutate(isConB = b6_main_effect_sig == b8_posthoc) %>%
-  group_by(`Paper ID`, journal) %>%
-  summarize(meanB_art = mean(isConB), .groups="drop")
+  group_by(journal, `Paper ID`) %>%
+  summarize(meanB_arti = mean(isConB), # the prevalence coefficient
+            count = n(),
+            .groups="drop")
 
 # show the result
-df_conv_b_all <- df_conv_b_artile %>%
-  summarize(journal = "All", conB = mean(meanB_art))
-
 df_conv_b_artile %>%
   group_by(journal) %>%
-  summarize(conB = mean(meanB_art)) %>%
-  add_row(df_conv_b_all) # add summary row
+  summarize(conB = mean(meanB_arti),
+            count = n()) %>%
+  add_row(df_conv_b_artile %>%
+            summarize(journal = "Overall", 
+                      conB = mean(meanB_arti),
+                      count = n()),
+          .before=1) # add summary row
+```
+Overall, about **74.61%** research articles performed the post-hoc analysis when the main effect (with three or more levels) was significant or did not perform the post-hoc analysis when the main effect was not significant.
+
+##### Apply corrections (per ANOVA)
+
+```{r}
+# percentage of ANOVAs performing post-hoc analysis (only) when the main effect is significant
+# (or) not perform the post-hoc analysis when the main effect is not significant
+df_conv_b %>%
+  group_by(journal) %>%
+  summarize(conB = mean(isConB),
+            count=n()) %>%
+  add_row(summarize(df_conv_b,
+                    journal = "Overall",
+                    conB = mean(isConB),
+                    count=n()),
+          .before=1) # add summary row
 ```
 
 Multiple comparison corrections (per ANOVA)
 ```{r}
-df_conv_b_adjust <- df_conv_b %>%
-  filter(b6_main_effect_sig == 1) %>%
-  group_by(b9_correction) %>%
-  summarize(journal = 'All', count = n())
-
 df_conv_b %>%
-  filter(b6_main_effect_sig == 1) %>%
+  filter(b8_posthoc == 1) %>% # only examine articles performing post-hoc analysis
   group_by(journal, b9_correction) %>%
   summarize(count = n(), .groups="drop") %>%
-  add_row(df_conv_b_adjust)
+  add_row(df_conv_b %>%
+            filter(b8_posthoc == 1) %>%
+            group_by(b9_correction) %>%
+            summarize(journal = 'Overall', count = n()),
+          .before = 1) %>% 
+  pivot_wider(b9_correction, names_from = journal, 
+              values_from = count, values_fill = 0)
+```
+Notably, this analyses and results included ANOVAs performed post-hoc analysis and apply corrections, but the corresponding main effect was not significant. 
+
+##### Conduct post-hoc analysis and apply corrections with significant main effects
+(per ANOVA)
+```{r}
+df_conv_b %>%
+  filter(b8_posthoc == 1) %>% # only examine articles performing post-hoc analysis
+  group_by(b6_main_effect_sig, journal, b9_correction) %>%
+  summarize(count = n(), .groups="drop") %>%
+  add_row(df_conv_b %>%
+            filter(b8_posthoc == 1) %>%
+            group_by(b6_main_effect_sig, b9_correction) %>%
+            summarize(journal = 'Overall', count = n(), .groups="drop"),
+          .before =1) %>% 
+  pivot_wider(c(b6_main_effect_sig, b9_correction), names_from = journal, 
+              values_from = count, values_fill = 0)
 ```
 
 
 #### Convention C: simple effect analysis
+
 ```{r}
 df_conv_c <- df_conv %>%
-  filter(N_factor>1) %>%
-  select(`Paper ID`, N_factor, starts_with("c") & !starts_with("Con"), journal)
+  filter(N_factor>1,
+         c6_inter_sig != -1) %>% # only include ANOVAs reporting the interaction
+  select(`Paper ID`, N_factor, starts_with("c") & !starts_with("Con"), journal) %>% 
+  mutate(isConC = c6_inter_sig == c8_simple_effect) 
+```
 
+##### Per research article 
+
+```{r}
 # percentage of (not) performing simple analysis when the interaction is (not) significant
 df_conv_c_artile <- df_conv_c %>%
-  mutate(isConC = c6_inter_sig == c8_simple_effect) %>%
-  group_by(`Paper ID`, journal) %>%
-  summarize(meanC_art = mean(isConC), .groups="drop")
+  group_by(journal, `Paper ID`) %>%
+  summarize(meanC_art = mean(isConC), # prevalence coefficient
+            .groups="drop")
 
 # show the result
-df_conv_c_all <- df_conv_c_artile %>%
-  summarize(journal = "All", conC = mean(meanC_art))
-
 df_conv_c_artile %>%
   group_by(journal) %>%
-  summarize(conC = mean(meanC_art)) %>%
-  add_row(df_conv_c_all) # add summary row
+  summarize(conC = mean(meanC_art),
+            count = n()) %>%
+  add_row(df_conv_c_artile %>%
+            summarize(journal = "All", 
+                      conC = mean(meanC_art),
+                      count = n()),
+          .before=1) # add summary row
+```
+
+##### Apply corrections (per ANOVA)
+
+```{r}
+# percentage of ANOVAs performing simple effect analysis (only) when the interaction is significant
+# (or) not perform the simple effect analysis when the interaction is not significant
+df_conv_c %>%
+  group_by(journal) %>%
+  summarize(conC = mean(isConC),
+            count=n()) %>%
+  add_row(summarize(df_conv_c,
+                    journal = "Overall",
+                    conC = mean(isConC),
+                    count=n()),
+          .before=1) # add summary row
 ```
 
 Multiple comparison corrections (per ANOVA)
 ```{r}
-df_conv_c_adjust <- df_conv_c %>%
-  filter(c6_inter_sig == 1) %>%
-  group_by(c9_correction) %>%
-  summarize(journal = 'All', count = n())
-
 df_conv_c %>%
-  filter(c6_inter_sig == 1) %>%
+  filter(c8_simple_effect == 1) %>%
   group_by(journal, c9_correction) %>%
   summarize(count = n(), .groups="drop") %>%
-  add_row(df_conv_c_adjust)
+  add_row(df_conv_c %>%
+            filter(c8_simple_effect == 1) %>%  # only include ANOVA performing simple 
+            group_by(c9_correction) %>%
+            summarize(journal = 'Overall', count = n()),
+          .before = 1) %>% 
+  pivot_wider(c9_correction, names_from = journal, 
+              values_from = count, values_fill = 0)
+```
+
+##### Conduct simple effect analysis and apply corrections with significant interactions
+(per ANOVA)
+```{r}
+df_conv_c %>%
+  filter(c8_simple_effect == 1) %>% # only examine articles performing simple effect analysis
+  group_by(c6_inter_sig, journal, c9_correction) %>%
+  summarize(count = n(), .groups="drop") %>%
+  add_row(df_conv_c %>%
+            filter(c8_simple_effect == 1) %>%
+            group_by(c6_inter_sig, c9_correction) %>%
+            summarize(journal = 'Overall', count = n(), .groups="drop"),
+          .before =1) %>% 
+  pivot_wider(c(c6_inter_sig, c9_correction), names_from = journal, 
+              values_from = count, values_fill = 0)
 ```
 
 #### Convention D: separate 
@@ -1094,13 +1249,15 @@ df_conv_d_artile <- df_conv_de %>%
   summarize(meanD_art = mean(d1_separate), .groups="drop")
 
 # show the result
-df_conv_d_all <- df_conv_d_artile %>%
-  summarize(journal = "All", conD = mean(meanD_art))
-
 df_conv_d_artile %>%
   group_by(journal) %>%
-  summarize(conD = mean(meanD_art)) %>%
-  add_row(df_conv_d_all) # add summary row
+  summarize(conD = mean(meanD_art),
+            count = n()) %>%
+  add_row(df_conv_d_artile %>%
+            summarize(journal = "Overall", 
+                      conD = mean(meanD_art),
+                      count = n()),
+          .before=1) # add summary row
 ```
 
 #### Convention E: combine 
@@ -1113,15 +1270,15 @@ df_conv_e_artile <- df_conv_de %>%
   summarize(meanE_art = mean(e1_combine), .groups="drop")
 
 # show the result
-df_conv_e_all <- df_conv_e_artile %>%
-  summarize(journal = "All", conE = mean(meanE_art))
-
 df_conv_e_artile %>%
   group_by(journal) %>%
-  summarize(conE = mean(meanE_art)) %>%
-  add_row(df_conv_e_all) # add summary row
+  summarize(conE = mean(meanE_art),
+            count = n()) %>%
+  add_row(df_conv_e_artile %>%
+  summarize(journal = "Overall", 
+            conE = mean(meanE_art),
+            count = n()),
+  .before=1) # add summary row
 ```
-
-
 
 

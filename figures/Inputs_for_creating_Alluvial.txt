@@ -1,0 +1,81 @@
+// https://sankeymatic.com/build/
+// first part
+One-way ANOVA [332] three-level
+One-way ANOVA [194] two-level
+One-way ANOVA [42] four-level
+One-way ANOVA [32] five-level
+One-way ANOVA [14] six-level
+One-way ANOVA [5] 7 or more levels
+
+Two-way ANOVA [485] 2 x 2
+Two-way ANOVA [199] 3 x 2
+Two-way ANOVA [21] 3 x 3
+Two-way ANOVA [32] 4 x 2
+Two-way ANOVA [6] 5 x 3
+Two-way ANOVA [9] 6 x 2
+Two-way ANOVA [40] other two-way ANOVA
+
+Three-way ANOVA [134] 2 x 2 x 2
+Three-way ANOVA [43] 3 x 2 x 2
+Three-way ANOVA [18] 4 x 2 x 2
+Three-way ANOVA [10] 5 x 2 x 2
+Three-way ANOVA [6] 12 x 2 x 2
+Three-way ANOVA [13] other three-way ANOVA
+
+Four-way ANOVA [22] 2 x 2 x 2 x 2
+Four-way ANOVA [10] 3 x 2 x 2 x 2
+Four-way ANOVA [3] other four-way ANOVA
+
+// the second part
+two-level [194] 2 levels
+three-level [332] 3 levels
+four-level [42] 4 levels
+2 x 2 [485] 4 levels
+five-level [32] 5 levels
+six-level [14] 6 levels
+3 x 2 [199] 6 levels
+7 or more levels [3] 7 levels
+4 x 2 [32] 8 levels
+2 x 2 x 2 [134] 8 levels
+7 or more levels [1] 8 levels
+3 x 3 [21] 9 levels
+7 or more levels [1] 10 levels
+other two-way ANOVA [5] 10 levels
+6 x 2 [9] 12 levels
+other two-way ANOVA [5] 12 levels
+3 x 2 x 2 [43] 12 levels
+other two-way ANOVA [5] 14 levels
+5 x 3 [6] 15 levels
+other two-way ANOVA [9] 16 levels
+4 x 2 x 2 [18] 16 levels
+2 x 2 x 2 x 2 [22] 16 levels
+other three-way ANOVA [1] 18 levels
+other two-way ANOVA [3] 18 levels
+other two-way ANOVA [4] 20 levels
+5 x 2 x 2 [10] 20 levels
+other two-way ANOVA [1] 21 levels
+other two-way ANOVA [4] 24 levels
+other three-way ANOVA [4] 24 levels
+3 x 2 x 2 x 2 [10] 24 levels
+
+other two-way ANOVA [4] 30 or more levels
+12 x 2 x 2 [6] 30 or more levels
+other three-way ANOVA [8] 30 or more levels
+other four-way ANOVA [3] 30 or more levels
+
+// set node colors
+:One-way ANOVA #E64B35
+:Two-way ANOVA #56B4E9
+:Three-way ANOVA #008B45
+:Four-way ANOVA #925E9F
+
+:two-level #ba2914
+:three-level #961705
+:2 x 2 #338bbd
+:3 x 2 #1c648c
+:2 x 2 x 2 #02964b
+
+:2 levels #DF8F44
+:3 levels #e31212
+:4 levels #25B4FC
+:8 levels #02b55b
