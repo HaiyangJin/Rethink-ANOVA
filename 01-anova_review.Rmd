@@ -805,6 +805,10 @@ tibble(mean = mean(kappa_df$value),
        max = max(kappa_df$value))
 ```
 
+```{r save the kappa_df to supplementary}
+saveRDS(kappa_df, file=file.path("supplementary", "kappa_df"))
+```
+
 
 ## Prevalence of ANOVA and the conventions
 

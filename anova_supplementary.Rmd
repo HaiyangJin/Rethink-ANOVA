@@ -1,0 +1,117 @@
+---
+title             : 'Supplementary materials for "ANOVA conventions may not work as you wish"'
+shorttitle         : "Supplementary materials for ANOVA conventions"
+
+author: 
+  - name: \addORCIDlink{Haiyang Jin}{0000-0003-3290-3901}
+    affiliation: ""
+    address: ""
+    email: "haiyang.jin@outlook.com"
+    corresponding: yes
+  - name: Yuzhu Ji
+    affiliation: ""
+    address: ""
+
+affiliation:
+  - id            : ""
+    institution   : ""
+  
+authornote        : 
+keywords          : "analysis of variances; practical applications; confirmatory data analysis; hypothesis-based Type I error rate; simple interaction analysis"
+wordcount         : "X"
+
+figurelist        : false
+tablelist         : false
+footnotelist      : false
+linenumbers       : false
+mask              : false
+draft             : false
+floatsintext      : true
+
+classoption       : "man"
+numbersections    : false
+link-citations    : true
+
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+
+header-includes:
+  - |
+    \makeatletter
+    \renewcommand{\paragraph}{\@startsection{paragraph}{4}{\parindent}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-1em}%
+      {\normalfont\normalsize\bfseries\typesectitle}}
+    
+    \renewcommand{\subparagraph}[1]{\@startsection{subparagraph}{5}{1em}%
+      {0\baselineskip \@plus 0.2ex \@minus 0.2ex}%
+      {-\z@\relax}%
+      {\normalfont\normalsize\bfseries\itshape\hspace{\parindent}{#1}\textit{\addperi}}{\relax}}
+    \makeatother
+
+csl               : "`r system.file('rmd', 'apa7.csl', package = 'papaja')`"
+documentclass     : "apa7"
+output            : 
+  # papaja::apa6_word: 
+  # toc: no
+  papaja::apa6_pdf:
+  toc: no
+  toc_depth: 3
+  highlight: default
+  latex_engine: xelatex
+
+# rmarkdown::render("anova_supplementary.Rmd", papaja::apa6_pdf())
+---
+
+\renewcommand{\thefigure}{S\arabic{figure}} \setcounter{figure}{0}
+\renewcommand{\thetable}{S\arabic{table}} \setcounter{table}{0}
+
+
+```{r setup, include=FALSE}
+## load libraries
+library(knitr)
+library(tidyverse)
+library(papaja)
+theme_set(theme_apa())
+
+# set global chunk options, put figures into folder
+options(tinytex.verbose = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  include = TRUE,
+  warning = FALSE,
+  replace.assign=TRUE,
+  width = 1800, 
+  message = FALSE
+)
+
+set.seed(2022)
+```
+
+
+```{r fig-omni-typeI}
+include_graphics(file.path("figures", "sfig_simu_TypeI_omni.png"))
+```
+
+```{r fig-omni-single}
+include_graphics(file.path("figures", "sfig_simu_single_omni.png"))
+```
+
+
+```{r fig-main-typeI}
+include_graphics(file.path("figures", "sfig_simu_TypeI_mainpost.png"))
+```
+
+
+```{r fig-main-single}
+include_graphics(file.path("figures", "sfig_simu_single_mainpost.png"))
+```
+
+\pagebreak
+```{r tab-kappa}
+readRDS(file.path("supplementary", "kappa_df.rds")) %>% 
+  select(-conf_mat) %>% 
+  apa_table(caption="Intra-rater consistency (Cohen's Kappa) for the ANOVAs indentified in the first 20 articles in each journal.",
+            note='Some extra notes.')
+```
+
+
