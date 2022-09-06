@@ -1,6 +1,13 @@
 
 # Reviewing ANOVA conventions
-This section is the analysis of reviewing ANOVA prevalence and complexity, as well as the prevalence of ANOVA conventions.   
+This section is the analysis of reviewing ANOVA prevalence and complexity, as well as the prevalence of ANOVA conventions in research articles published in six psychology journals in 2021: 
+
+1. Journal of Experimental Psychology: General, volume 150, issue 1-12 (158 articles)
+2. Psychological Science, volume 32, issues 1-12 (168 articles)
+3. Journal of Abnormal Psychology (now Journal of Psychopathology and Clinical Science), volume 130, issues 1-8 (76 articles)
+4. Journal of Consulting and Clinical Psychology, volume 89, issues 1-12 (86 articles)
+5. Journal of Experimental Social Psychology, volumes 92-97 (121 articles)
+6. Journal of Personality and Social Psychology, volumes 120 and 121, issues 1-6 (140 articles)
 
 ```{r include=FALSE}
 # bookdown::preview_chapter("01-anova_review.Rmd", "bookdown::html_document2") 
@@ -120,7 +127,7 @@ print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
 
 ### The first 120 articles
 
-When trying to estimate the consistency of analysis information for the first 20 articles in each journal, we realize that we may not identify the same number of ANOVAs for each experiment/article. Therefore, we add some un-preregistered analysis steps. Specifically, before evaluating the consistency for the ANOVA information, we count the number of ANOVAs identified by both Y.J. *and* H.J., and the number of ANOVAs only identified by Y.J. *or* H.J. We are unable to evaluate this consistency as there is no information on the number of analyses that are not identified as ANOVA by both Y.J. and H.J. Therefore, we will only display the above numbers without calculating Cohen's Kappa. Next, both Y.J. and H.J. re-reviewed these articles and the intra-rater consistency will be performed on the information after matching the numbers of identified ANOVAs for each article.
+When trying to estimate the consistency of analysis information for the first 20 articles in each journal, we realize that we may not identify the same number of (or the same) ANOVAs for each experiment/article. Therefore, we add some **un-preregistered** analysis steps. Specifically, before evaluating the consistency for the ANOVA information, we count the number of ANOVAs identified by both Y.J. *and* H.J., and the number of ANOVAs only identified by Y.J. *or* H.J. We are unable to evaluate this consistency as there is no information on the number of analyses that are not identified as ANOVA by both Y.J. and H.J. Therefore, we will only display the these numbers without calculating Cohen's Kappa. Next, both Y.J. and H.J. re-reviewed these articles and the intra-rater consistency will be performed on the information after matching the numbers of identified ANOVAs for each article.
 
 #### With mismatched numbers of ANOVAs
 
@@ -164,9 +171,10 @@ sum_conv_before <- df_conv_before %>%
             YJ1_HJ0 = sum(YJ1_HJ0))
 sum_conv_before 
 ```
+where `YJ1_HJ1` denotes the number of ANOVAs identified by both Y.J. and H.J., `YJ0_HJ1` denotes the number of ANOVAs identified by H.J., but not Y.J., `YJ1_HJ0` denotes the number of ANOVAs identified by Y.J., but not H.J.
 
 <br>
-Since it may happen that when one rater identified 10 ANOVAs and the other identified 8 ANOVAs, only 7 of them were identical. In other words, the first and the second raters missed 1 and 3 ANOVAs, respectively. We additionally check this case for all articles with different numbers of ANOVAs identified by Y.J. and H.J. The numbers of identified ANOVA after corrections are: 
+It may happen that although both raters identified the same number of ANOVAs for a particular research article, essentially they identified different ANOVAs. For instance, one rater only identified an ANOVA for accuracy but the other rater only identified an ANOVA for response times in the same article. Although the number of ANOVA matched, both raters actually missed one ANOVA. Therefore, we additionally check this case for all articles. The numbers of identified ANOVA after corrections are: 
 ```{r}
 cmatrix_first20_before <- tibble(
   Rating = c("anova_HJ_1", "anova_HJ_0"),
@@ -175,11 +183,11 @@ cmatrix_first20_before <- tibble(
 )
 cmatrix_first20_before
 ```
+where `anova_YJ_1` and `anova_YJ_0` denote the number of ANOVAs that are identified and that are not identified by Y.J. `anova_HJ_1` and `anova_HJ_0` denote the number of ANOVAs that are identified and that are not identified by H.J. 
 
+#### After matching the identified ANOVAs in each article 
 
-#### After matching the number of ANOVAs in each article 
-
-Load analysis information after matching the number of ANOVAs in each article:
+Load analysis information after matching the identified ANOVAs in each article:
 ```{r}
 # read the coding sheet for the first round by YJ (after)
 df_conv_YJ1_after <- 
@@ -215,6 +223,17 @@ kappa_ed <- lapply(design_list,
 kappa_ed
 ```
 
+<br> Confusion matrix for `N_factor`:
+```{r}
+as.data.frame(kappa_ed$conf_mat[1])
+```
+
+<br> Confusion matrix for `max_No_levels`:
+```{r}
+as.data.frame(kappa_ed$conf_mat[2])
+```
+
+<br> 
 ##### Convention A
 Cohen's Kappa for convention A:
 ```{r}
@@ -251,6 +270,7 @@ bind_cols(a1_report_all_YJ = df_conv_YJ1_after$a1_report_all,
 as.data.frame(kappa_a$conf_mat[[2]])
 ```
 
+<br>
 ##### Convention B
 Main effect and post-hoc analysis.
 
@@ -314,7 +334,7 @@ bind_cols(`b3_N_non-sig_b1_YJ` = df_conv_YJ1_after$`b3_N_non-sig_b1`,
 ```
 
 <br><br>
-Only evaluate consistency of `b7_main_name` using the rows with consistent information in `con_b_wlist`:
+Only evaluate consistency of `b7_main_name` using the rows with consistent information in `b1_N_factor3+`, `b2_N_significant_b1`, and `b3_N_non-sig_b1`:
 ```{r}
 tmp_exclude_b1 <- c(186, 187) # rows with inconsistent information
 kappa_bu1 <- thekappa(
@@ -348,7 +368,7 @@ bind_cols(`b7_main_name_YJ` = df_conv_YJ1_after$`b7_main_name`,
 ```
 
 <br><br>
-Only evaluate consistency of `b8_posthoc` using the rows with consistent information in `con_b_wlist` and `b7_main_name`:
+Only evaluate consistency of `b8_posthoc` using the rows with consistent information in `b1_N_factor3+`, `b2_N_significant_b1`, `b3_N_non-sig_b1`, and `b7_main_name`:
 ```{r}
 tmp_exclude_b2 <- c(186, 187, 199, 200) # rows with inconsistent information
 kappa_bu2 <- thekappa(
@@ -385,7 +405,7 @@ bind_cols(b8_posthoc_YJ = df_conv_YJ1_after$b8_posthoc,
 ```
 
 <br><br>
-Only evaluate consistency of `b9_correction` using rows with consistent information in `con_b_wlist` and performed post-hoc analysis (`b8_posthoc==1`):
+Only evaluate consistency of `b9_correction` using rows with consistent information in `b1_N_factor3+`, `b2_N_significant_b1`, `b3_N_non-sig_b1`, and performed post-hoc analysis (`b8_posthoc==1`):
 ```{r}
 tmp_exclude_b3 <- c(174, 186, 187, 199, 200) # rows with inconsistent information
 kappa_bu3 <- thekappa(
@@ -428,7 +448,7 @@ Summary for Convention B:
 (kappa_b <- bind_rows(kappa_bw, kappa_bu1, kappa_bu2, kappa_bu3))
 ```
 
-
+<br>
 ##### Convention C
 Interaction and simple effect analysis
 
@@ -491,7 +511,7 @@ bind_cols(`c3_N_non-sig_in_c1_YJ` = df_conv_YJ1_after$`c3_N_non-sig_in_c1`,
 ```
 
 <br><br>
-Only evaluate consistency of `c7_2way_name` using the rows with consistent information in `con_c_wlist`: 
+Only evaluate consistency of `c7_2way_name` using the rows with consistent information in `c1_N_2way_inter`, `c2_N_sig_in_c1`, and `c3_N_non-sig_in_c1`: 
 ```{r}
 kappa_cu1 <- thekappa(df1=filter(df_conv_YJ1_after, 
                                  N_factor>1),
@@ -521,7 +541,7 @@ diff_c7
 ```
 
 <br><br>
-Only evaluate consistency of `c8_simple_effect` using the rows with consistent information in `con_c_wlist` and checked main effects (`c7_2way_name != "NA"`):
+Only evaluate consistency of `c8_simple_effect` using the rows with consistent information in `c1_N_2way_inter`, `c2_N_sig_in_c1`, `c3_N_non-sig_in_c1`, and checked main effects (`c7_2way_name != "NA"`):
 ```{r}
 tmp_exclude_c2 <- diff_c7$row_idx
 
@@ -562,7 +582,7 @@ diff_c8
 ```
 
 <br><br>
-Only evaluate consistency of `c9_correction` using the rows with consistent information in `con_c_wlist` and performed simple effect analysis (`c8_simple_effect==1`):
+Only evaluate consistency of `c9_correction` using the rows with consistent information in `c1_N_2way_inter`, `c2_N_sig_in_c1`, `c3_N_non-sig_in_c1`, and performed simple effect analysis (`c8_simple_effect==1`):
 ```{r}
 tmp_exclude_c3 <- c(diff_c7$row_idx, diff_c8$row_idx)
 
@@ -606,7 +626,7 @@ Summary for Convention C:
 (kappa_c <- bind_rows(kappa_cw, kappa_cu1, kappa_cu2, kappa_cu3))
 ```
 
-
+<br>
 ##### Convention D and E
 Separate or collapse factors and perform more ANOVAs depending on the statistical significance of a higher-level interaction.
 
@@ -806,6 +826,7 @@ tibble(mean = mean(kappa_df$value),
 ```
 
 ```{r save the kappa_df to supplementary}
+# save consistency results to display in supplementary materials
 saveRDS(kappa_df, file=file.path("supplementary", "kappa_df"))
 ```
 
@@ -845,6 +866,7 @@ df_conv <- bind_rows(
          b6_main_effect_sig = as.integer(b6_main_effect_sig),
          b8_posthoc = as.integer(b8_posthoc),
          b9_correction = as_factor(b9_correction),
+         b9_correction = fct_relevel(b9_correction, "NA", "none"),
          c1_N_2way_inter = as.integer(c1_N_2way_inter),
          c2_N_sig_in_c1 = as.integer(c2_N_sig_in_c1),
          `c3_N_non-sig_in_c1` = as.integer(`c3_N_non-sig_in_c1`),
@@ -852,6 +874,7 @@ df_conv <- bind_rows(
          c5_which_nonsig_inter = as.integer(c5_which_nonsig_inter),
          c8_simple_effect = as.integer(c8_simple_effect),
          c9_correction = as_factor(c9_correction),
+         c9_correction = fct_relevel(c9_correction, "NA", "none"),
          d1_e1_highest_sig = as.integer(d1_e1_highest_sig),
          d1_separate = as.integer(d1_separate),
          e1_combine = as.integer(e1_combine),
@@ -873,11 +896,11 @@ Articles included at each stage:
 # number of articles included at each stage
 df_included_all <- df_mainscreen %>%  
   summarize(journal = "Overall",
-            In1_all = n(),
-            In2_title = sum(1-Title_Prescreening),
-            In3_research = sum(`Research article`),
-            In4_ANOVA = sum(`Use ANOVA`),
-            In5_include = sum(Included))
+            In1_all = n(), # total number of articles
+            In2_title = sum(1-Title_Prescreening), # number of articles remaining after title pre-screening
+            In3_research = sum(`Research article`), # number of identified research article
+            In4_ANOVA = sum(`Use ANOVA`), # number of articles used ANOVAs
+            In5_include = sum(Included)) # finally included ANOVAs
 
 # number of articles at different stages
 df_included <- df_mainscreen %>% 
@@ -890,8 +913,13 @@ df_included <- df_mainscreen %>%
   add_row(df_included_all, .before=1)
 df_included
 ```
+`In1_all` denotes the number of all articles;  
+`In2_title` denotes the number of articles after title pre-screening;  
+`In3_research` denotes the number of research articles;  
+`In4_ANOVA` denotes the number of research articles used ANOVAs;  
+`In5_include` denotes the number of research articles included in following reviewing.  
 
-
+<br>
 The percentage of included articles:
 ```{r}
 # Percentage (relative to the total number of articles)
@@ -903,6 +931,7 @@ df_included %>%
             In5_include = paste0(round((In5_include/In1_all)*100, 2), '%'))
 ```
 
+<br>
 The number of excluded articles at each stage:
 ```{r}
 # number of articles excluded at different stages
@@ -929,9 +958,11 @@ df_excluded
 The prevalence of ANOVAs:
 ```{r}
 # The percentage of articles employing ANOVA among all research articles:  
-df_included %>% 
+df_prevalence <- df_included %>% 
   mutate(prevalence_anova = paste0(round(In4_ANOVA/In3_research*100, 2), '%'))
+df_prevalence
 ```
+Please note that `prevalence_anova` is calculated by `In4_ANOVA/In3_research`.
 
 ### ANOVA complexity
 
@@ -941,30 +972,47 @@ df_complex <- df_conv %>%
   transmute(`Paper ID`, 
             Design_int = str_split(Design, "_"),
             Design = sapply(Design_int, function(x){paste(sort(as.numeric(x), decreasing=T), collapse="_")}),
-            N_factor = sapply(Design_int, function(x){length(as.numeric(x))}),
-            Max_level = sapply(Design_int, function(x){max(as.numeric(x))}),
-            Avg_No_levels = sapply(Design_int, function(x){mean(as.numeric(x))}),
+            N_factor, max_No_levels, 
+            # N_factor = sapply(Design_int, function(x){length(as.numeric(x))}),
+            # Max_level = sapply(Design_int, function(x){max(as.numeric(x))}),
+            Avg_No_levels = sapply(Design_int, function(x){mean(as.numeric(x))}), # per factor
             Complexity = sapply(Design_int, function(x){prod(as.numeric(x))}),
             journal)
 ```
 
 Across ANOVAs:
 ```{r}
-df_complex %>%
+df_complexity <- df_complex %>%
   group_by(journal) %>%
   summarize(mean_N_factor = mean(N_factor),
-            mean_max_N_levels = mean(Max_level),
+            mean_max_N_levels = mean(max_No_levels),
             mean_complexity = mean(Complexity)) %>%
   add_row( # add summary row
     summarize(df_complex,
               journal = "Overall",
               mean_N_factor = mean(N_factor),
-              mean_max_N_levels = mean(Max_level),
+              mean_max_N_levels = mean(max_No_levels),
               mean_complexity = mean(Complexity)),
     .before = 1)
+df_complexity
 ```
 
-```{r fig.width=10, fig.asp=.5, warning=FALSE}
+```{r save the anova prevalence and complexity to supplementary}
+# save prevalence and complexity results to display in supplementary materials
+df_pre_com <- left_join(df_prevalence, df_complexity, by="journal") %>% 
+  transmute(Journal=journal,
+            N = as.integer(In1_all),
+            `N title` = as.integer(In2_title),
+            `N research` = as.integer(In3_research),
+            `N ANOVAs` = as.integer(In4_ANOVA),
+            Prevalence = prevalence_anova,
+            `N factors` = mean_N_factor,
+            `N conditions` = mean_complexity)
+
+saveRDS(df_pre_com, file=file.path("supplementary", "aov_pre_com.rds"))
+```
+
+```{r fig.width=10, fig.asp=.6, warning=FALSE}
 for (iN in 1:4) {
   
   tmpplot <- df_complex %>%
@@ -987,7 +1035,7 @@ for (iN in 1:4) {
 plot_design12 <- ggarrange(plot_design1, plot_design2,
                          widths = c(3, 7))
 plot_design34 <- ggarrange(plot_design3, plot_design4,
-                         widths = c(7.5, 2.5))
+                         widths = c(7, 3))
 plot_design <- ggarrange(plot_design12, plot_design34, 
                          nrow=2, heights = c(1, 1.1))
 plot_design
@@ -1041,16 +1089,18 @@ df_conv_a_article <- df_conv_a %>%
   group_by(journal, `Paper ID`) %>% 
   summarize(a1_per_article = mean(a1_report_all), .groups = "drop") 
 
-df_conv_a_article %>%
+df_prev_a <- df_conv_a_article %>%
   group_by(journal) %>%
-  summarize(conA = mean(a1_per_article), count=n()) %>%
+  summarize(conA = mean(a1_per_article), 
+            countA=n()) %>%
   add_row(summarize(df_conv_a_article,
                     journal = "Overall",
                     conA = mean(a1_per_article),
-                    count=n()),
+                    countA=n()),
           .before=1) # add summary row
+df_prev_a
 ```
-Results showed about 71.37% research articles reported the results of all (significant) main effects and interaction in the ANOVA.
+Results showed about `r round(df_pre_a$conA[1]*100,2)`% research articles reported the results of all (significant) main effects and interaction in the ANOVA.
 
 ##### Apply corrections (per ANOVA)
 
@@ -1071,13 +1121,14 @@ On average, 74.31% of the inspected multi-way ANOVAs reported the results of all
 <br>
 Whether any correction method was applied (per ANOVA):
 ```{r}
-df_conv_a %>%
+df_prev_a_corr <- df_conv_a %>%
   group_by(journal, a3_correction) %>%
   summarize(count = n(), .groups="drop") %>%
   add_row(df_conv_a %>%
             group_by(a3_correction) %>%
             summarize(journal = "Overall", count = n()),
           .before=1)
+df_prev_a_corr
 ```
 Result show that no correction method (e.g., omnibus F-test or Bonferroni) was applied in any reviewed multi-way ANOVA.
 
@@ -1100,17 +1151,18 @@ df_conv_b_artile <- df_conv_b %>%
             .groups="drop")
 
 # show the result
-df_conv_b_artile %>%
+df_prev_b <- df_conv_b_artile %>%
   group_by(journal) %>%
   summarize(conB = mean(meanB_arti),
-            count = n()) %>%
+            countB= n()) %>%
   add_row(df_conv_b_artile %>%
             summarize(journal = "Overall", 
                       conB = mean(meanB_arti),
-                      count = n()),
+                      countB = n()),
           .before=1) # add summary row
+df_prev_b
 ```
-Overall, about **74.61%** research articles performed the post-hoc analysis when the main effect (with three or more levels) was significant or did not perform the post-hoc analysis when the main effect was not significant.
+Overall, about **`r round(df_prev_b$conB[1]*100,2)`%** research articles performed the post-hoc analysis when the main effect (with three or more levels) was significant *or* did not perform the post-hoc analysis when the main effect was not significant.
 
 ##### Apply corrections (per ANOVA)
 
@@ -1130,7 +1182,7 @@ df_conv_b %>%
 
 Multiple comparison corrections (per ANOVA)
 ```{r}
-df_conv_b %>%
+df_prev_b_corr <- df_conv_b %>%
   filter(b8_posthoc == 1) %>% # only examine articles performing post-hoc analysis
   group_by(journal, b9_correction) %>%
   summarize(count = n(), .groups="drop") %>%
@@ -1141,6 +1193,7 @@ df_conv_b %>%
           .before = 1) %>% 
   pivot_wider(b9_correction, names_from = journal, 
               values_from = count, values_fill = 0)
+df_prev_b_corr
 ```
 Notably, this analyses and results included ANOVAs performed post-hoc analysis and apply corrections, but the corresponding main effect was not significant. 
 
@@ -1159,7 +1212,7 @@ df_conv_b %>%
   pivot_wider(c(b6_main_effect_sig, b9_correction), names_from = journal, 
               values_from = count, values_fill = 0)
 ```
-
+Results show that most studies performed post-hoc analysis only when the main effect is significant, and most of these studies do not apply any correction procedure. Also, there are some articles in which post-hoc analysis was performed when the main effect is not significant (and no correction procedure was applied).
 
 #### Convention C: simple effect analysis
 
@@ -1181,15 +1234,16 @@ df_conv_c_artile <- df_conv_c %>%
             .groups="drop")
 
 # show the result
-df_conv_c_artile %>%
+df_prev_c <- df_conv_c_artile %>%
   group_by(journal) %>%
   summarize(conC = mean(meanC_art),
-            count = n()) %>%
+            countC = n()) %>%
   add_row(df_conv_c_artile %>%
-            summarize(journal = "All", 
+            summarize(journal = "Overall", 
                       conC = mean(meanC_art),
-                      count = n()),
+                      countC = n()),
           .before=1) # add summary row
+df_prev_c
 ```
 
 ##### Apply corrections (per ANOVA)
@@ -1210,7 +1264,7 @@ df_conv_c %>%
 
 Multiple comparison corrections (per ANOVA)
 ```{r}
-df_conv_c %>%
+df_prev_c_corr <- df_conv_c %>%
   filter(c8_simple_effect == 1) %>%
   group_by(journal, c9_correction) %>%
   summarize(count = n(), .groups="drop") %>%
@@ -1221,6 +1275,7 @@ df_conv_c %>%
           .before = 1) %>% 
   pivot_wider(c9_correction, names_from = journal, 
               values_from = count, values_fill = 0)
+df_prev_c_corr
 ```
 
 ##### Conduct simple effect analysis and apply corrections with significant interactions
@@ -1238,6 +1293,7 @@ df_conv_c %>%
   pivot_wider(c(c6_inter_sig, c9_correction), names_from = journal, 
               values_from = count, values_fill = 0)
 ```
+Similar to Convention B, most research articles performed simple effect analysis when the interaction is significant, and most of them do not apply any correction procedure. Also, there are some articles performing simple effect analysis when the interaction is not significant (and most of them do not apply any correction procedure).
 
 #### Convention D: separate 
 
@@ -1246,43 +1302,69 @@ df_conv_de <- df_conv %>%
   filter(N_factor>2) %>%
   select(`Paper ID`, N_factor, d1_e1_highest_sig, d1_separate, e1_combine, journal)
 
-#
+# per research article
 df_conv_d_artile <- df_conv_de %>%
   filter(d1_e1_highest_sig == 1) %>%
   group_by(`Paper ID`, journal) %>%
   summarize(meanD_art = mean(d1_separate), .groups="drop")
 
 # show the result
-df_conv_d_artile %>%
+df_prev_d <- df_conv_d_artile %>%
   group_by(journal) %>%
   summarize(conD = mean(meanD_art),
-            count = n()) %>%
+            countD = n()) %>%
   add_row(df_conv_d_artile %>%
             summarize(journal = "Overall", 
                       conD = mean(meanD_art),
-                      count = n()),
+                      countD = n()),
           .before=1) # add summary row
+df_prev_d
 ```
+About half of the articles separated one factors and performed more ANOVAs when the highest-level interaction is significant (although there are not many articles included three or more factors).
 
 #### Convention E: combine 
 
 ```{r}
-#
+# per research article
 df_conv_e_artile <- df_conv_de %>%
   filter(d1_e1_highest_sig == 0) %>%
   group_by(`Paper ID`, journal) %>%
   summarize(meanE_art = mean(e1_combine), .groups="drop")
 
 # show the result
-df_conv_e_artile %>%
+df_prev_e <- df_conv_e_artile %>%
   group_by(journal) %>%
   summarize(conE = mean(meanE_art),
-            count = n()) %>%
+            countE = n()) %>%
   add_row(df_conv_e_artile %>%
   summarize(journal = "Overall", 
             conE = mean(meanE_art),
-            count = n()),
+            countE = n()),
   .before=1) # add summary row
+df_prev_e
 ```
+None of the examined research articles combined factors and perform additional ANOVA (explicilty).
 
+#### Summary of convention prevalence
+
+```{r}
+df_prev_con <- df_prev_a %>% 
+  left_join(df_prev_b, by="journal") %>% 
+  left_join(df_prev_c, by="journal") %>% 
+  left_join(df_prev_d, by="journal") %>% 
+  left_join(df_prev_e, by="journal") %>% 
+  mutate(conD = ifelse(is.na(conD), 0, conD),
+         countD = ifelse(is.na(countD), 0, countD),
+         conE = ifelse(is.na(conE), 0, conE),
+         countE = ifelse(is.na(countE), 0, countE)) %>% 
+  transmute(Journal = journal,
+            `Conv. A` = paste0(round(conA*100,2),"% (", countA, ")"),
+            `Conv. B` = paste0(round(conB*100,2),"% (", countB, ")"),
+            `Conv. C` = paste0(round(conC*100,2),"% (", countC, ")"),
+            `Conv. D` = paste0(round(conD*100,2),"% (", countD, ")"),
+            `Conv. E` = paste0(round(conE*100,2),"% (", countE, ")"),
+            )
+
+df_prev_con
+```
 
