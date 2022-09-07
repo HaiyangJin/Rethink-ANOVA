@@ -8,5 +8,5 @@ sessionInfo()
 ```
 
 
-## Reference {.unnumbered}
+## References {.unnumbered}
 

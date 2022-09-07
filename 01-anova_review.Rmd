@@ -1,5 +1,10 @@
 
 # Reviewing ANOVA conventions
+
+```{r include=FALSE}
+# bookdown::preview_chapter("01-anova_review.Rmd", "bookdown::html_document2") 
+```
+
 This section is the analysis of reviewing ANOVA prevalence and complexity, as well as the prevalence of ANOVA conventions in research articles published in six psychology journals in 2021: 
 
 1. Journal of Experimental Psychology: General, volume 150, issue 1-12 (158 articles)
@@ -8,10 +13,6 @@ This section is the analysis of reviewing ANOVA prevalence and complexity, as we
 4. Journal of Consulting and Clinical Psychology, volume 89, issues 1-12 (86 articles)
 5. Journal of Experimental Social Psychology, volumes 92-97 (121 articles)
 6. Journal of Personality and Social Psychology, volumes 120 and 121, issues 1-6 (140 articles)
-
-```{r include=FALSE}
-# bookdown::preview_chapter("01-anova_review.Rmd", "bookdown::html_document2") 
-```
 
 Package loading and general settings:
 ```{r setup1, message=FALSE}
@@ -31,15 +32,7 @@ knitr::opts_chunk$set(
   width = 1800,
   emmeans=list(msg.interaction=FALSE))
 
-source(here::here("R", "funcs.R"))
 source(here::here("R", "func_kappa.R"))
-
-# colors used in figures
-two_colors <- c("#D55E00", "#56B4E9")
-custom_clr <- c("#7F7F7F", 
-                "#E64B35", "#56B4E9", "#DF8F44", 
-                "#008B45", "#925E9F", "#415384", 
-                "#000000")
 
 set.seed(2022)
 ```
@@ -1010,6 +1003,7 @@ df_pre_com <- left_join(df_prevalence, df_complexity, by="journal") %>%
             `N conditions` = mean_complexity)
 
 saveRDS(df_pre_com, file=file.path("supplementary", "aov_pre_com.rds"))
+df_pre_com
 ```
 
 ```{r fig.width=10, fig.asp=.6, warning=FALSE}

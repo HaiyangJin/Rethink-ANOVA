@@ -1,6 +1,11 @@
 
 # Simulations for false positive rates in ANOVA conventions
-Some texts.   
+
+```{r include=FALSE}
+# bookdown::preview_chapter("02-anova_simulation.Rmd", "bookdown::html_document2") 
+```
+
+This section is the simulations for estimating the false positive rates associates with ANOVA conventions (A, B, and C). 
 
 ## Preparations
 
@@ -24,26 +29,26 @@ knitr::opts_chunk$set(
   emmeans=list(msg.interaction=FALSE))
 
 source(here::here("R", "funcs.R"))
-source(here::here("R", "func_kappa.R"))
 set.seed(2022)
 ```
 
 ```{r}
-two_colors <- c("#D55E00", "#56B4E9")
 custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F", "#415384", "#000000")
-```
-
-
-## Simulating Type I error in ANOVA
-
-```{r}
 Nsim <- 10000 # number of simulation
-alphas <- c(0.001, 0.005, 0.01, 0.05, (1:4)/10)  # 0.001 ~ 0.4
 ```
 
-### ANOVA omnibus F-test
+## Simulating false positive rate in ANOVA
+
+We simulate the different false positive rates in 
+
+1. examining all effects in an ANOVA (corresponds to Convention A);
+2. inspecting main effects and conducting post-hoc analysis (corresponds to Convention B);
+3. inspecting interaction and conducting post-hoc analysis (corresponds to Convention C).
+
+### ANOVA and omnibus F-test
 
 ```{r, message=F}
+# custom function (available at R/funcs.R)
 p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16, 
                       file_cache = here::here("simulation", "p_omni.rds"),
                       N_IV = 2:5)
@@ -505,6 +510,7 @@ fig_simu_single_b_supp
 ### Interaction and simple effect analysis
 
 ```{r, message=F}
+# custom function (available at R/funcs.R)
 p_inter_simple <- sim_inter_simple(N_subj = 30, iter = Nsim, n_core=16, 
                                    file_cache = here::here("simulation", "p_inter_simple.rds"))
 ```
@@ -754,10 +760,6 @@ fig_simu_single <- ggarrange(fig_simu_single_a, fig_simu_single_b,
 # ggsave(file.path("figures","fig_simu_single.png"), fig_simu_single, width = 12, height = 10.3)
 fig_simu_single
 ```
-
-
-### Table 1
-
 
 ## Supplemenatry
 
