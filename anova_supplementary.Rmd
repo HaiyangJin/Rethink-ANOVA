@@ -58,7 +58,6 @@ output            :
   toc_depth: 3
   highlight: default
   latex_engine: xelatex
-
 # rmarkdown::render("anova_supplementary.Rmd", papaja::apa6_pdf())
 ---
 
@@ -81,7 +80,8 @@ knitr::opts_chunk$set(
   warning = FALSE,
   replace.assign=TRUE,
   width = 1800, 
-  message = FALSE
+  message = FALSE,
+  fig.align='center'
 )
 
 set.seed(2022)
@@ -92,18 +92,20 @@ set.seed(2022)
 include_graphics(file.path("figures", "sfig_simu_TypeI_omni.png"))
 ```
 
+\pagebreak
 ```{r fig-omni-single}
 include_graphics(file.path("figures", "sfig_simu_single_omni.png"))
 ```
 
-
+\pagebreak
 ```{r fig-main-typeI}
 include_graphics(file.path("figures", "sfig_simu_TypeI_mainpost.png"))
 ```
 
-
+\pagebreak
 ```{r fig-main-single}
-include_graphics(file.path("figures", "sfig_simu_single_mainpost.png"))
+include_graphics(file.path("figures", "sfig_simu_single_mainpost.png"),
+                 dpi = 300)
 ```
 
 \pagebreak
@@ -111,7 +113,16 @@ include_graphics(file.path("figures", "sfig_simu_single_mainpost.png"))
 readRDS(file.path("supplementary", "kappa_df.rds")) %>% 
   select(-conf_mat) %>% 
   apa_table(caption="Intra-rater consistency (Cohen's Kappa) for the ANOVAs indentified in the first 20 articles in each journal.",
-            note='Some extra notes.')
+            longtable = TRUE,
+            note="Some extra notes. For cases only one option is reported where Cohen's Kappa cannot be calculated, we manually set the value to 1. Unweighted methods were applied to nominal ratings; weighted methods were applied to ordinal or numeric ratings.")
 ```
 
-
+\pagebreak
+```{r tab-aov-pre-com}
+readRDS(file.path("supplementary", "aov_pre_com.rds")) %>% 
+  apa_table(caption="ANOVA prevalence and complexity.",
+            align = 'c',
+            # landscape = TRUE,
+            # align = c("p{3cm}", rep("p{3.6cm}", ncol(.))),
+            note="Some extra notes. ")
+```
