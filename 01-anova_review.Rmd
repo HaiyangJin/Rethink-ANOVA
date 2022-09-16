@@ -1365,13 +1365,14 @@ None of the examined research articles combined factors and perform additional A
 
 ```{r}
 df_conv_any <- df_conv_a_article %>% 
-  left_join(df_conv_b_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  full_join(df_conv_b_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  full_join(df_conv_c_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  full_join(df_conv_d_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  full_join(df_conv_e_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  mutate(a1_per_article = if_else(is.na(a1_per_article), 0, a1_per_article)) %>% 
   mutate(meanB_arti = if_else(is.na(meanB_arti), 0, meanB_arti)) %>% 
-  left_join(df_conv_c_artile, Joining, by = c("journal", "Paper ID")) %>% 
   mutate(meanC_art = if_else(is.na(meanC_art), 0, meanC_art)) %>% 
-  left_join(df_conv_d_artile, Joining, by = c("journal", "Paper ID")) %>% 
   mutate(meanD_art = if_else(is.na(meanD_art), 0, meanD_art)) %>% 
-  left_join(df_conv_e_artile, Joining, by = c("journal", "Paper ID")) %>% 
   mutate(meanE_art = if_else(is.na(meanE_art), 0, meanE_art)) %>% 
   transmute(journal, `Paper ID`, 
             conv = a1_per_article+meanB_arti+meanC_art+meanD_art+meanE_art,
@@ -1384,10 +1385,8 @@ df_prev_any <- df_conv_any %>%
             summarize(journal = "Overall", 
                       countAny = sum(anyconv)),
           .before=1) %>%  # add summary row
-  left_join(df_included, by="journal") %>% 
   transmute(journal,
-            conAny = countAny/In5_include,
-            count = In5_include)
+            count = countAny)
   
 df_prev_any
 ```
@@ -1411,8 +1410,7 @@ df_prev_con <- df_prev_a %>%
             `Conv. C` = paste0(round(conC*100,2),"% (", countC, ")"),
             `Conv. D` = paste0(round(conD*100,2),"% (", countD, ")"),
             `Conv. E` = paste0(round(conE*100,2),"% (", countE, ")"),
-            `Conv. Any` = paste0(round(conAny*100,2),"% (", count, ")")
-            )
+            `Conv. Any` = count)
 
 df_prev_con
 ```
