@@ -95,7 +95,19 @@ Ka_res <- df_res_K %>%
   as.matrix() %>%
   Kappa()
 
-print(Ka_res, CI=TRUE) # Kappa for research articles
+# Research article
+# Usage ANOVA
+kappa_res <- tibble(
+  Colname = "Research article",
+  method = "Unweighted",
+  value = Ka_res$Unweighted["value"],
+  ASE = Ka_res$Unweighted["ASE"],
+  lwr = confint(Ka_res)[1,1],
+  upr = confint(Ka_res)[1,2],
+  conf_mat = list(as.matrix(column_to_rownames(df_res_K, "Research article_YJ")))
+)
+
+kappa_res  # Kappa for research articles
 ```
 
 <br>
@@ -114,7 +126,17 @@ Ka_aov <- df_aov_K %>%
   as.matrix() %>% 
   Kappa()
 
-print(Ka_aov, CI=TRUE) # Kappa for using ANOVA
+kappa_aov <- tibble(
+  Colname = "Use ANOVA",
+  method = "Unweighted",
+  value = Ka_aov$Unweighted["value"],
+  ASE = Ka_aov$Unweighted["ASE"],
+  lwr = confint(Ka_aov)[1,1],
+  upr = confint(Ka_aov)[1,2],
+  conf_mat = list(as.matrix(column_to_rownames(df_aov_K, "Use ANOVA_YJ")))
+)
+
+kappa_aov # Kappa for using ANOVA
 ```
 
 
@@ -806,9 +828,9 @@ Summary for other information:
 (kappa_o <- bind_rows(kappa_o1, kappa_o2, kappa_o3))
 ```
 
-##### Summary consistency for ANOVA conventions
+### Summary consistency for ANOVA conventions
 ```{r}
-(kappa_df <- bind_rows(kappa_ed, kappa_a, kappa_b, kappa_c, kappa_de, kappa_o))
+(kappa_df <- bind_rows(kappa_res, kappa_aov, kappa_ed, kappa_a, kappa_b, kappa_c, kappa_de, kappa_o))
 ```
 Descriptive statistics of the consistency:
 ```{r}
@@ -1337,7 +1359,38 @@ df_prev_e <- df_conv_e_artile %>%
   .before=1) # add summary row
 df_prev_e
 ```
-None of the examined research articles combined factors and perform additional ANOVA (explicilty).
+None of the examined research articles combined factors and perform additional ANOVA (explicitly).
+
+#### Apply any convention 
+
+```{r}
+df_conv_any <- df_conv_a_article %>% 
+  left_join(df_conv_b_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  mutate(meanB_arti = if_else(is.na(meanB_arti), 0, meanB_arti)) %>% 
+  left_join(df_conv_c_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  mutate(meanC_art = if_else(is.na(meanC_art), 0, meanC_art)) %>% 
+  left_join(df_conv_d_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  mutate(meanD_art = if_else(is.na(meanD_art), 0, meanD_art)) %>% 
+  left_join(df_conv_e_artile, Joining, by = c("journal", "Paper ID")) %>% 
+  mutate(meanE_art = if_else(is.na(meanE_art), 0, meanE_art)) %>% 
+  transmute(journal, `Paper ID`, 
+            conv = a1_per_article+meanB_arti+meanC_art+meanD_art+meanE_art,
+            anyconv = as.integer(conv>0)) 
+
+df_prev_any <- df_conv_any %>%
+  group_by(journal) %>%
+  summarize(countAny = sum(anyconv)) %>%
+  add_row(df_conv_any %>%
+            summarize(journal = "Overall", 
+                      countAny = sum(anyconv)),
+          .before=1) %>%  # add summary row
+  left_join(df_included, by="journal") %>% 
+  transmute(journal,
+            conAny = countAny/In5_include,
+            count = In5_include)
+  
+df_prev_any
+```
 
 #### Summary of convention prevalence
 
@@ -1347,6 +1400,7 @@ df_prev_con <- df_prev_a %>%
   left_join(df_prev_c, by="journal") %>% 
   left_join(df_prev_d, by="journal") %>% 
   left_join(df_prev_e, by="journal") %>% 
+  left_join(df_prev_any, by="journal") %>% 
   mutate(conD = ifelse(is.na(conD), 0, conD),
          countD = ifelse(is.na(countD), 0, countD),
          conE = ifelse(is.na(conE), 0, conE),
@@ -1357,8 +1411,10 @@ df_prev_con <- df_prev_a %>%
             `Conv. C` = paste0(round(conC*100,2),"% (", countC, ")"),
             `Conv. D` = paste0(round(conD*100,2),"% (", countD, ")"),
             `Conv. E` = paste0(round(conE*100,2),"% (", countE, ")"),
+            `Conv. Any` = paste0(round(conAny*100,2),"% (", count, ")")
             )
 
 df_prev_con
 ```
+The numbers in the parentheses are the total count meeting the criteria/conditions. For example, the numbers in parentheses in `Conv. A` shows that 193 research articles employ more than one factor and 71.37% of them reported all the (significant) effects.
 
