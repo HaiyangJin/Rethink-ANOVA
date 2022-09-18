@@ -1108,10 +1108,12 @@ df_conv_a_article <- df_conv_a %>%
 df_prev_a <- df_conv_a_article %>%
   group_by(journal) %>%
   summarize(conA = mean(a1_per_article), 
+            countA_arti = sum(a1_per_article>0.5),
             countA=n()) %>%
   add_row(summarize(df_conv_a_article,
                     journal = "Overall",
                     conA = mean(a1_per_article),
+                    countA_arti = sum(a1_per_article>0.5),
                     countA=n()),
           .before=1) # add summary row
 df_prev_a
@@ -1170,13 +1172,15 @@ df_conv_b_artile <- df_conv_b %>%
 df_prev_b <- df_conv_b_artile %>%
   group_by(journal) %>%
   summarize(conB = mean(meanB_arti),
+            countB_arti = sum(meanB_arti>0.5),
             countB= n()) %>%
   add_row(df_conv_b_artile %>%
             summarize(journal = "Overall", 
                       conB = mean(meanB_arti),
+                      countB_arti = sum(meanB_arti>0.5),
                       countB = n()),
           .before=1) # add summary row
-df_prev_b
+df_prev_b 
 ```
 Overall, about **`r round(df_prev_b$conB[1]*100,2)`%** research articles performed the post-hoc analysis when the main effect (with three or more levels) was significant *or* did not perform the post-hoc analysis when the main effect was not significant.
 
@@ -1207,13 +1211,22 @@ df_prev_b_corr <- df_conv_b %>%
             group_by(b9_correction) %>%
             summarize(journal = 'Overall', count = n()),
           .before = 1) %>% 
-  pivot_wider(b9_correction, names_from = journal, 
-              values_from = count, values_fill = 0)
-df_prev_b_corr
-```
-Notably, this analyses and results included ANOVAs performed post-hoc analysis and apply corrections, but the corresponding main effect was not significant. 
+  add_row(df_conv_b %>% 
+            filter(b8_posthoc == 1) %>%
+            group_by(journal) %>% 
+            summarize(b9_correction = 'Overall', count = n()),
+          .before = 1) %>% 
+  mutate(Conv = "B")
 
-##### Conduct post-hoc analysis and apply corrections with significant main effects
+df_prev_b_corr %>% 
+  pivot_wider(b9_correction, names_from = journal, 
+              values_from = count, values_fill = 0) %>% 
+  mutate(Overall = if_else(b9_correction=="Overall", sum(Overall), Overall)) %>% 
+  slice(2:n(),1)
+```
+Note: this analyses and results included ANOVAs performed post-hoc analysis and apply corrections, but the corresponding main effect was not significant. 
+
+##### Conduct post-hoc analysis and apply corrections for significant main effects
 (per ANOVA)
 ```{r}
 df_conv_b %>%
@@ -1225,8 +1238,14 @@ df_conv_b %>%
             group_by(b6_main_effect_sig, b9_correction) %>%
             summarize(journal = 'Overall', count = n(), .groups="drop"),
           .before =1) %>% 
-  pivot_wider(c(b6_main_effect_sig, b9_correction), names_from = journal, 
-              values_from = count, values_fill = 0)
+  mutate(b9_correction=fct_relevel(b9_correction, "none", "LSD", "Tukey", "Bonferroni", 
+                                "Holm-Bonferroni", "Duncan"),
+         b6_main_effect_sig = factor(b6_main_effect_sig, levels=c(1,0)),
+         journal = factor(journal, levels=c("Overall", "JEPG", "Psych Sci", "J Abn Psych", "JCCP", "JESP", "JPSP"))) %>% 
+  pivot_wider(journal, names_from = c(b6_main_effect_sig, b9_correction),
+              names_sort = TRUE,
+              values_from = count, values_fill = 0) %>% 
+  arrange(journal)
 ```
 Results show that most studies performed post-hoc analysis only when the main effect is significant, and most of these studies do not apply any correction procedure. Also, there are some articles in which post-hoc analysis was performed when the main effect is not significant (and no correction procedure was applied).
 
@@ -1253,10 +1272,12 @@ df_conv_c_artile <- df_conv_c %>%
 df_prev_c <- df_conv_c_artile %>%
   group_by(journal) %>%
   summarize(conC = mean(meanC_art),
+            countC_arti = sum(meanC_art>0.5),
             countC = n()) %>%
   add_row(df_conv_c_artile %>%
             summarize(journal = "Overall", 
                       conC = mean(meanC_art),
+                      countC_arti = sum(meanC_art>0.5),
                       countC = n()),
           .before=1) # add summary row
 df_prev_c
@@ -1289,9 +1310,11 @@ df_prev_c_corr <- df_conv_c %>%
             group_by(c9_correction) %>%
             summarize(journal = 'Overall', count = n()),
           .before = 1) %>% 
+  mutate(Conv = "C")
+  
+df_prev_c_corr %>% 
   pivot_wider(c9_correction, names_from = journal, 
               values_from = count, values_fill = 0)
-df_prev_c_corr
 ```
 
 ##### Conduct simple effect analysis and apply corrections with significant interactions
@@ -1306,8 +1329,14 @@ df_conv_c %>%
             group_by(c6_inter_sig, c9_correction) %>%
             summarize(journal = 'Overall', count = n(), .groups="drop"),
           .before =1) %>% 
-  pivot_wider(c(c6_inter_sig, c9_correction), names_from = journal, 
-              values_from = count, values_fill = 0)
+  mutate(c9_correction=fct_relevel(c9_correction, "none", "LSD", "Tukey", "Bonferroni", "Scheffe",
+                                "Holm-Bonferroni"),
+         c6_inter_sig = factor(c6_inter_sig, levels=c(1,0)),
+         journal = factor(journal, levels=c("Overall", "JEPG", "Psych Sci", "J Abn Psych", "JCCP", "JESP", "JPSP"))) %>% 
+  pivot_wider(journal, names_from = c(c6_inter_sig, c9_correction), 
+              names_sort = TRUE,
+              values_from = count, values_fill = 0) %>% 
+  arrange(journal)
 ```
 Similar to Convention B, most research articles performed simple effect analysis when the interaction is significant, and most of them do not apply any correction procedure. Also, there are some articles performing simple effect analysis when the interaction is not significant (and most of them do not apply any correction procedure).
 
