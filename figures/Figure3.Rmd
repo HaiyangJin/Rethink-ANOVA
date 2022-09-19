@@ -1,0 +1,306 @@
+---
+title             : "Figure 1 used in rethink ANOVA"
+
+author: 
+  - name: "Haiyang Jin"
+    affiliation: ""
+    address: ""
+    email: "haiyang.jin@outlook.com"
+    corresponding: yes
+    
+
+authornote        : |
+  This is the code for creating the Figure 1 in the rethinking ANOVA paper.
+        
+date: "`r format(Sys.time(), '%d-%m-%Y')`"
+
+---
+
+```{r setup and load the related libraries, appendix, include=FALSE}
+## load libraries
+library(knitr)
+library(tidyverse)
+library(faux)
+library(afex)
+library(emmeans)
+library(ggpubr)
+library(here)
+library(papaja)
+
+theme_set(theme_apa())
+
+# set global chunk options, put figures into folder
+options(tinytex.verbose = TRUE)
+knitr::opts_chunk$set(
+  echo = FALSE,
+  include = TRUE,
+  warning = FALSE,
+  replace.assign=TRUE,
+  width = 1800, 
+  message = FALSE,
+  fig.align='center'
+)
+
+set.seed(2022)
+
+# source(here("R", "funcs.R"))
+
+```
+
+# Interaction and simple effect analysis
+
+## Sig interaction with sig simple effect
+```{r}
+set.seed(2021)
+df_simu_ss <-
+  add_random(subj=1:60) %>% 
+  add_between(group=c("control", "train"), .by="subj") %>% 
+  add_within(test = c("pre", "post")) %>% 
+  add_contrast("group", "treatment", colnames = "group_dummy") %>% 
+  add_contrast("test", "treatment", colnames = "test_dummy") %>% 
+  add_ranef("subj", s_int=.1, s_slp=.1, .cors=.5) %>% 
+  add_ranef(sigma=3) %>% 
+  mutate(d = (2 + s_int) + group_dummy*.5 + (test_dummy + s_slp)*.5 +
+           group_dummy * (test_dummy + s_slp)*1.5 + sigma)
+  
+str(df_simu_ss)
+```
+
+```{r}
+aov_simu_ss <- aov_4(d ~ group * test + (test | subj),
+                   data = df_simu_ss)
+aov_simu_ss
+```
+
+```{r}
+emm_simu_ss <- emmeans(aov_simu_ss, ~ group + test)
+(contr_simu_ss <- contrast(emm_simu_ss, "pairwise", adjust="none"))[c(1,2,5,6)]
+```
+
+```{r}
+emmip(emm_simu_ss, group ~ test, CIs = T)
+```
+
+## Sig interaction with non-sig simple effect
+Significant interaction with non-significant simple effect analysis results:
+
+```{r}
+set.seed(2021)
+
+df_simu_sn <-
+  add_random(subj=1:60) %>% 
+  add_between(group=c("control", "train"), .by="subj") %>% 
+  add_within(test = c("pre", "post")) %>% 
+  add_contrast("group", "treatment", colnames = "group_dummy") %>% 
+  add_contrast("test", "treatment", colnames = "test_dummy") %>% 
+  add_ranef("subj", s_int=.1, s_slp=.1, .cors=.5) %>% 
+  add_ranef(sigma=3) %>% 
+  mutate(d = (1.8 + s_int) + group_dummy*3 + (test_dummy + s_slp)*1.5 +
+           group_dummy * (test_dummy + s_slp)*(-3.3) + sigma)
+
+str(df_simu_sn)
+```
+
+```{r}
+aov_simu_sn <- aov_4(d ~ group * test + (test | subj),
+                   data = df_simu_sn)
+aov_simu_sn
+```
+
+```{r}
+emm_simu_sn <- emmeans(aov_simu_sn, ~ group + test)
+(contr_simu_sn <- contrast(emm_simu_sn, "pairwise", adjust="none"))[c(1,2,5,6)]
+```
+
+```{r}
+emmip(emm_simu_sn, group ~ test, CIs = T)
+```
+
+## Non-sig interaction with sig simple effect
+Non-significant interaction with significant simple effect analysis results:
+```{r}
+set.seed(2021)
+
+df_simu_ns <-
+  add_random(subj=1:60) %>% 
+  add_between(group=c("control", "train"), .by="subj") %>% 
+  add_within(test = c("pre", "post")) %>% 
+  add_contrast("group", "treatment", colnames = "group_dummy") %>% 
+  add_contrast("test", "treatment", colnames = "test_dummy") %>% 
+  add_ranef("subj", s_int=.1, s_slp=.1, .cors=.5) %>% 
+  add_ranef(sigma=3) %>% 
+  mutate(d = (1.5 + s_int) + group_dummy*1 + (test_dummy + s_slp)*1.5 +
+           group_dummy * (test_dummy + s_slp)*.3 + sigma)
+
+str(df_simu_ns)
+```
+
+```{r}
+aov_simu_ns <- aov_4(d ~ group * test + (test | subj),
+                   data = df_simu_ns)
+aov_simu_ns
+```
+
+```{r}
+emm_simu_ns<- emmeans(aov_simu_ns, ~ group + test)
+(contr_simu_ns <- contrast(emm_simu_ns, "pairwise", adjust="none"))[c(1,2,5,6)]
+```
+
+```{r}
+emmip(emm_simu_ns, group ~ test, CIs = T)
+```
+
+## Non-sig interaction with non-sig simple effect
+Non-significant interaction with non-significant simple effect analysis results:
+```{r}
+set.seed(2021)
+
+df_simu_nn <- 
+  add_random(subj=1:60) %>% 
+  add_between(group=c("control", "train"), .by="subj") %>% 
+  add_within(test = c("pre", "post")) %>% 
+  add_contrast("group", "treatment", colnames = "group_dummy") %>% 
+  add_contrast("test", "treatment", colnames = "test_dummy") %>% 
+  add_ranef("subj", s_int=.1, s_slp=.1, .cors=.5) %>% 
+  add_ranef(sigma=3) %>% 
+  mutate(d = (2.5 + s_int) + group_dummy*1.3 + (test_dummy + s_slp)*(-.5) +
+           group_dummy * (test_dummy + s_slp)*(-.5) + sigma)
+
+str(df_simu_nn)
+```
+
+```{r}
+aov_simu_nn <- aov_4(d ~ group * test + (test | subj),
+                   data = df_simu_nn)
+aov_simu_nn
+```
+
+```{r}
+emm_simu_nn<- emmeans(aov_simu_nn, ~ group + test)
+(contr_simu_nn <- contrast(emm_simu_nn, "pairwise", adjust="none"))[c(1,2,5,6)]
+```
+
+```{r}
+emmip(emm_simu_nn, group ~ test, CIs = T)
+```
+
+## Combined plots
+
+```{r}
+
+df_inter <- rbind(
+  mutate(as_tibble(aov_simu_ss$anova_table)[3,],
+         interaction = "significant", `simple effect` = "significant",
+         x = 1.5, y = 1.5),
+  mutate(as_tibble(aov_simu_sn$anova_table)[3,],
+         interaction = "significant", `simple effect` = "nonsignificant",
+         x = 1.5, y = 1.5),
+  mutate(as_tibble(aov_simu_ns$anova_table)[3,],
+         interaction = "nonsignificant", `simple effect` = "significant",
+         x = 1.5, y = 1.5),
+  mutate(as_tibble(aov_simu_nn$anova_table)[3,],
+         interaction = "nonsignificant", `simple effect` = "nonsignificant",
+         x = 1.5, y = 1.5)
+) %>% 
+  mutate(group = "control1", test = "pre1",
+         ptext = if_else(`Pr(>F)` < .001, paste0("italic(p)[inter] < .001"), 
+                         paste0("italic(p)[inter] == ", round(`Pr(>F)`,3))),
+         interaction = fct_relevel(interaction, "significant", "nonsignificant"),
+         `simple effect` = fct_relevel(`simple effect`, "significant", "nonsignificant"))
+
+df_simp <- rbind(
+  mutate(filter(as_tibble(contr_simu_ss)[c(1,2,5,6)], p.value==min(p.value)),
+         interaction = "significant", `simple effect` = "significant",
+         x = 1.5, y = 1),
+  mutate(filter(as_tibble(contr_simu_sn)[c(1,2,5,6)], p.value==min(p.value)),
+         interaction = "significant", `simple effect` = "nonsignificant",
+         x = 1.5, y = 1),
+  mutate(filter(as_tibble(contr_simu_ns)[c(1,2,5,6)], p.value==min(p.value)),
+         interaction = "nonsignificant", `simple effect` = "significant",
+         x = 1.5, y = 1),
+  mutate(filter(as_tibble(contr_simu_nn)[c(1,2,5,6)], p.value==min(p.value)),
+         interaction = "nonsignificant", `simple effect` = "nonsignificant",
+         x = 1.5, y = 1)
+) %>% 
+  mutate(group = "control1", test = "pre1",
+         labeltext_inter = paste0(interaction, "~interaction"),
+         labeltext_sim = paste0(`simple effect`, "~simple~effects"),
+         ptext = if_else(`p.value` < .001, paste0("italic(p)[min_sim] < .001"), 
+                         paste0("italic(p)[min_sim] == ", round(`p.value`,3))),
+         interaction = fct_relevel(interaction, "significant", "nonsignificant"),
+         `simple effect` = fct_relevel(`simple effect`, "significant", "nonsignificant"))
+
+```
+
+```{r fig.asp=.7, fig.width=7}
+theme_set(theme_apa())
+
+rbind(mutate(as_tibble(emm_simu_ss),
+             interaction = "significant", `simple effect` = "significant"),
+      mutate(as_tibble(emm_simu_sn),
+             interaction = "significant", `simple effect` = "nonsignificant"),
+      mutate(as_tibble(emm_simu_ns),
+             interaction = "nonsignificant", `simple effect` = "significant"),
+      mutate(as_tibble(emm_simu_nn),
+             interaction = "nonsignificant", `simple effect` = "nonsignificant")
+) %>% 
+  mutate(test = fct_recode(test, "pre-test" = "pre", "post-test" = "post"),
+         interaction = fct_relevel(interaction, "significant", "nonsignificant"),
+         `simple effect` = fct_relevel(`simple effect`, "significant", "nonsignificant")) %>% 
+  ggplot(aes(test, emmean, group=group, color=group)) +
+  geom_point(size = 2, position=position_dodge(.1)) +
+  geom_line(aes(linetype=group), size = 1, position=position_dodge(.1)) +
+  geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL), width=0.15, 
+                position=position_dodge(.1), show.legend=F) +
+  facet_grid(`simple effect` ~ interaction, labeller = label_both) +
+  geom_text(aes(label=ptext, x=x, y=y), data=df_inter,
+            color="black", size = 3, show.legend = F, parse=T) +
+  geom_text(aes(label=ptext, x=x, y=y), data=df_simp,
+            color="black", size = 3, show.legend = F, parse=T) +
+  scale_color_manual(values=c("#56B4E9", "#D55E00")) +
+  labs(x=NULL, y=expression("Sensitivity"~italic("d'")), 
+       color="Group", linetype="Group") +
+  theme(legend.position=c(.5, .5)) +
+  NULL
+
+ggsave(file="inter_simple_sig_train.png", width = 7.2, height = 5.4)
+```
+
+```{r fig.asp=.7, fig.width=3}
+theme_set(theme_apa())
+
+rbind(mutate(as_tibble(emm_simu_ss),
+             interaction = "significant", `simple effect` = "significant"),
+      mutate(as_tibble(emm_simu_sn),
+             interaction = "significant", `simple effect` = "nonsignificant"),
+      mutate(as_tibble(emm_simu_ns),
+             interaction = "nonsignificant", `simple effect` = "significant"),
+      mutate(as_tibble(emm_simu_nn),
+             interaction = "nonsignificant", `simple effect` = "nonsignificant")
+) %>% 
+  mutate(interaction = fct_relevel(interaction, "significant", "nonsignificant"),
+         `simple effect` = fct_relevel(`simple effect`, "significant", "nonsignificant")) %>% 
+  ggplot(aes(test, emmean, group=group, color=group)) +
+  geom_point(size = 2, position=position_dodge(.1)) +
+  geom_line(aes(linetype=group), size = 1, position=position_dodge(.1)) +
+  geom_errorbar(aes(ymin=lower.CL, ymax=upper.CL), width=0.15, 
+                position=position_dodge(.1), show.legend=F) +
+  facet_grid(`simple effect` ~ interaction) +
+  geom_text(aes(label=labeltext_inter), data=df_simp, x=.5, y = 4.5,
+            color="black", size = 3, hjust=0, show.legend = F, parse=T) +
+  geom_text(aes(label=labeltext_sim), data=df_simp, x=.5, y = 4.3,
+            color="black", size = 3, hjust=0, show.legend = F, parse=T) +
+  geom_text(aes(label=ptext, x=x, y=y), data=df_inter,
+            color="black", size = 3, show.legend = F, parse=T) +
+  geom_text(aes(label=ptext, x=x, y=y), data=df_simp,
+            color="black", size = 3, show.legend = F, parse=T) +
+  labs(x="Alignment", y=expression("Sensitivity"~italic("d'")),
+       color="Congruency", linetype="Congruency") +
+  ylim(c(2.25, 4.45)) +
+  # theme_apa_nostrip() +
+  # theme(legend.position="bottom") +
+  theme(legend.position=c(.5,.55), legend.direction="horizontal") +
+  NULL
+
+# ggsave(file=here::here("images", "inter_simple_sig.png", width = 7.2, height = 5.4)
+```
