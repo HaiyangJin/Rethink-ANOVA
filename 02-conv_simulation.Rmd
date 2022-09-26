@@ -2,7 +2,7 @@
 # Simulations for Type I error rates in ANOVA conventions
 
 ```{r include=FALSE}
-# bookdown::preview_chapter("02-anova_simulation.Rmd", "bookdown::html_document2") 
+# bookdown::preview_chapter("02-conv_simulation.Rmd", "bookdown::html_document2") 
 ```
 
 This second section is the simulations for estimating the Type I error rates associates with ANOVA conventions (A, B, and C). 
