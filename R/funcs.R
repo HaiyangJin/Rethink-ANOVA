@@ -1,5 +1,5 @@
 
-##### Omnibus ANOVA #####
+# Omnibus ANOVA #####
 sim_omnibus <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
                         N_IV = 2, seed = 2022){
   # N_subj: number of participants per condition (between-subject design)
@@ -136,7 +136,7 @@ sig_omnibus <- function(df_simu_p, alphas=0.05, isBonferroni=TRUE){
   return(df_sig_omni)
 }
 
-##### Main effect and post-hoc analysis #####
+# Main effect and post-hoc analysis #####
 # Simulation for Type I error in main effect and post-hoc analysis
 sim_main_posthoc <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
                               N_levels = 3, seed = 2022,
@@ -255,7 +255,7 @@ sig_main_posthoc <- function(df_simu_p, alphas=0.05) {
 }
 
 
-##### Interaction and simple effect analysis #####
+# Interaction and simple effect analysis #####
 # Simulation for Type I error in interaction and simple effect analysis
 sim_inter_simple <- function (N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
                               seed = 2022,
@@ -398,7 +398,7 @@ sig_inter_simple <- function(df_simu_p, alphas=0.05) {
     
     df_simu_sig <- df_simu_sig_long  %>% 
       select(iter, adjust, group, alpha, N, contrast, sig_simple, sig_inter) %>% 
-      right_join(df_sim_sig_any, by=c("iter", "adjust", "group", "alpha")) %>% 
+      inner_join(df_sim_sig_any, by=c("iter", "adjust", "group", "alpha")) %>% 
       mutate(`sig_inter&any` = sig_inter & sig_any_simple)
     
     return(df_simu_sig) 
@@ -409,3 +409,137 @@ sig_inter_simple <- function(df_simu_p, alphas=0.05) {
   
   return(bind_rows(ltmp))
 }
+
+
+
+# Interaction and simple interaction analysis #####
+# Simulation for Type I error in interaction and simple effect analysis
+sim_simpinter <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
+                             seed = 2022,
+                             adjusts = c("none", "scheffe", "sidak", "bonferroni", "dunnettx")
+) {
+  # N_subj: number of participants per condition (between-subject design)
+  # iter: number of simulation/iteration
+  # n_core: number of cores to be used for simulation
+  # file_cache: file name of the cache file. If NULL, no file will be cached.
+  # seed: seed used for simulation
+  # adjusts: methods to be used in emmeans() to apply multiple comparison corrections
+  #           "tukey" was not used it is not applicable in this situation.
+  
+  # this function require library(emmeans)
+  
+  # apply a 2*3 (between-subject ) design
+  set.seed(seed)
+  
+  simu_simpinter_single <- function(N_subj, adjusts){
+    
+    N_adjust <- length(adjusts)
+    
+    levels_A <- c("a1", "a2")
+    levels_B <- c("b1", "b2", "b3")
+    
+    df_null <- tibble(
+      Subj = 1:(N_subj*length(levels_A)*length(levels_B)), 
+      IV_A = rep(levels_A, each = N_subj*length(levels_B)),
+      IV_B = rep(levels_B, times = N_subj*length(levels_A)),
+      DV = rnorm(N_subj*length(levels_A)*length(levels_B)) 
+    )
+    
+    aov_tmp <- aov_4(DV ~ IV_A * IV_B + (1|Subj), data = df_null)
+    
+    # p value of the 2*3 interaction
+    p_inter <- aov_tmp$anova_table$`Pr(>F)`[3]
+    
+    # simple interaction analysis (with/without multiple comparison corrections)
+    simpinter <- contrast(emmeans(aov_tmp, ~IV_A+IV_B),
+                             interaction="pairwise", adjust="none") 
+    
+    df_listsim <- vector(mode = "list", length = N_adjust)
+    
+    for (iadjust in 1:N_adjust) {
+      
+      # simple interaction of all
+      tmp_simpinter_adjust <- summary(simpinter, adjust = adjusts[iadjust])
+      
+      p_simpleinter <- as_tibble(tmp_simpinter_adjust) %>% 
+        select(IV_A_pairwise, IV_B_pairwise, p.value) %>% 
+        mutate(adjust = adjusts[iadjust])
+      
+      df_listsim[[iadjust]] = p_simpleinter
+    }
+    
+    # save all the p-values
+    one_simpinter <- df_listsim %>% 
+      bind_rows() %>% 
+      mutate(N = N_subj, p_inter = p_inter) # add other information
+    
+    return(one_simpinter)
+  }
+  
+  
+  # run simulation in parallel
+  if (!is.null(file_cache) && file.exists(as.character(file_cache))){
+    df_simu <- read_rds(file_cache)
+    message("Load simulation results from local cache files successfully.")
+    
+  } else {
+    # set parallel processing
+    Ns_iter <- rep(N_subj, times=iter)
+    ls_tibble <- pbapply::pblapply(Ns_iter, simu_simpinter_single,  
+                                   adjusts=adjusts, cl=n_core)
+    df_simu <- bind_rows(ls_tibble, .id = "iter") %>% 
+      mutate(iter = as_factor(iter),
+             IV_A_pairwise = as_factor(IV_A_pairwise),
+             IV_B_pairwise = as_factor(IV_B_pairwise),
+             adjust = if_else(adjust=="none", "uncorrected", adjust),
+             adjust = as_factor(adjust))
+    
+    if (!is.null(file_cache)){
+      write_rds(df_simu, file=file_cache)
+    }
+  }
+  
+  return(df_simu)
+}
+
+
+sig_simpinter <- function(df_simu_p, alphas=0.05) {
+  # df_simu_p: the output from sim_simpinter()
+  # alphas: alpha to be applied for claiming significant results
+  
+  # apply one alpha
+  sig_simpinter_single <- function(df_simu_p, thealpha){
+    
+    df_simu_sig_long <- df_simu_p %>% 
+      mutate(sig_inter = p_inter < thealpha,
+             sig_simpinter = p.value < thealpha,
+             alpha = thealpha,
+             A = str_remove_all(IV_A_pairwise, " "),
+             B = str_remove_all(IV_B_pairwise, " "),
+             A = factor(A),
+             B = factor(B)) %>% 
+      select(-c(IV_A_pairwise, IV_B_pairwise))
+    
+    # whether any of the four/two simple effects are significant 
+    # (when the multiple comparison corrections are applied for the four/two comparisons)
+    df_siminter_sig_any <- df_simu_sig_long %>% 
+      group_by(iter, adjust, alpha) %>% 
+      summarize(sig_any_simpinter = sum(sig_simpinter)>0, .groups = "drop")
+    
+    df_simu_sig <- df_simu_sig_long  %>% 
+      select(iter, adjust, alpha, N, A, B, sig_simpinter, sig_inter) %>% 
+      inner_join(df_siminter_sig_any, by=c("iter", "adjust", "alpha")) %>% 
+      mutate(`sig_inter&any` = sig_inter & sig_any_simpinter)
+    
+    return(df_simu_sig) 
+  }
+  
+  # combine results with multiple alphas
+  ltmp <- lapply(alphas, sig_simpinter_single, df_simu_p=df_simu_p)
+  
+  return(bind_rows(ltmp))
+}
+
+
+
+

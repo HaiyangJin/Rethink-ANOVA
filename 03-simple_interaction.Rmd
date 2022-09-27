@@ -1,0 +1,114 @@
+
+# Simulations for Type I error rates in simple interaction analysis
+
+```{r include=FALSE}
+# bookdown::preview_chapter("03-simple_interaction.Rmd", "bookdown::html_document2") 
+```
+
+This second section is the simulations for estimating the Type I error rates associates with the new practical application of simple interaction analysis.  
+
+## Preparations
+
+```{r setup3, include=FALSE}
+## load libraries
+library(knitr)
+library(tidyverse)
+library(afex)
+library(emmeans)
+library(ggpubr)
+library(RColorBrewer)
+
+theme_set(papaja::theme_apa())
+
+# set global chunk options, put figures into folder
+knitr::opts_chunk$set(
+  echo = TRUE, warning = FALSE, message = FALSE, 
+  include = TRUE, tidy = FALSE, archive = FALSE,
+  size = "big", fig.width=8, fig.asp=0.7, 
+  width = 1800,
+  emmeans=list(msg.interaction=FALSE))
+
+source(here::here("R", "funcs.R"))
+set.seed(2022)
+```
+
+```{r}
+custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F", "#415384", "#000000")
+Nsim <- 10000 # number of simulation
+```
+
+## interaction and simple interaction analysis
+
+```{r message=FALSE}
+p_simpinter <- sim_simpinter(N_subj = 30, iter = Nsim, n_core=16, 
+                             file_cache = here::here("simulation", "p_simpinter.rds"),
+                             seed = 2022)
+```
+
+
+```{r}
+sig_simpinter(p_simpinter, 0.05) %>% 
+  group_by(adjust, alpha) %>% 
+  summarize(mean(sig_simpinter),
+            mean(sig_inter),
+            mean(sig_any_simpinter),
+            mean(`sig_inter&any`),
+            .groups = "drop")
+```
+
+```{r}
+# Type I error rates in different situations
+df_TypeI_simpinter <- sig_simpinter(p_simpinter, 0.05) %>% 
+  group_by(alpha, adjust) %>% 
+  summarize(TypeI_inter = mean(sig_inter),
+            TypeI_siminteronly = mean(sig_any_simpinter),
+            `TypeI_inter&any` = mean(`sig_inter&any`), 
+            .groups = "drop")
+
+df_TypeI_simpinter
+```
+
+Claim significant results only when both the main effect and at least one of the post-hoc tests (with different multiple comparison corrections) are significant:
+
+```{r fig.width=8, fig.asp=0.7}
+df_simpinter_tmp <- df_TypeI_simpinter %>% 
+  pivot_longer(starts_with("TypeI_"), names_to = "effects", values_to = "TypeI") %>% 
+  mutate(adjust = if_else(effects == "TypeI_inter", "uncorrected", 
+                          if_else(adjust == "uncorrected", "uncorrected", 
+                                  str_to_title(as.character(adjust)))),
+         adjust = fct_reorder(adjust, TypeI, mean, .desc=TRUE),
+         adjust = fct_relevel(adjust, "uncorrected"),
+         effects = factor(effects, 
+                          levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
+         effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
+                              `Simple interaction analysis\n(three tests, FWER)`="TypeI_siminteronly", 
+                              `Interaction & simple interaction analysis\nwith three tests (CER)`="TypeI_inter&any")) %>% 
+  distinct() 
+
+fig_simu_simpinter <- df_simpinter_tmp %>% 
+  ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+  geom_col(width=1) +   
+  facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
+  ggh4x::facetted_pos_scales(
+    list(
+      scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65))
+    )) + 
+  scale_fill_manual(values = custom_clr[c(1,3:6)],
+                    breaks = levels(df_simpinter_tmp$adjust)) + #,  
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 24), expand = c(0, 0)) +
+  labs(x = expression("2 " %*% " 3 ANOVAs"), y = "Type I error rate (%)", fill = "") +
+  theme(legend.position = c(0.74, 0.63),
+        axis.ticks.length = unit(.15, "cm"),
+        axis.text.x = element_blank(),
+        panel.spacing.x = unit(0, "pt"),
+        strip.placement = "outside",
+        axis.title.x = element_text(margin = margin(t = 0)))
+  
+# ggsave(file.path("figures","fig_simu_TypeI_simpinter.png"), fig_simu_simpinter, width = 8, height = 5.6)
+fig_simu_simpinter
+```
+
+
