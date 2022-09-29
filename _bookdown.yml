@@ -1,6 +1,6 @@
 book_filename: "anova"
 rmd_files: ["index.Rmd", "01-anova_review.Rmd",  "02-conv_simulation.Rmd",
-            "03-simple_interaction.Rmd", "03-session_info.Rmd"]
+            "03-simple_interaction.Rmd", "04-session_info.Rmd"]
 repo: https://github.com/HaiyangJin/ANOVA-conventions
 delete_merged_file: true
 clean: [packages.bib]
