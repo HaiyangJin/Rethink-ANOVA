@@ -37,7 +37,7 @@ custom_clr <- c("#7F7F7F", "#E64B35", "#56B4E9", "#DF8F44", "#008B45", "#925E9F"
 Nsim <- 10000 # number of simulation
 ```
 
-## interaction and simple interaction analysis
+## Interaction and simple interaction analysis (2 * 3)
 
 ```{r message=FALSE}
 p_simpinter <- sim_simpinter(N_subj = 30, iter = Nsim, n_core=16, 
@@ -109,6 +109,158 @@ fig_simu_simpinter <- df_simpinter_tmp %>%
   
 # ggsave(file.path("figures","fig_simu_TypeI_simpinter.png"), fig_simu_simpinter, width = 8, height = 5.6)
 fig_simu_simpinter
+```
+
+
+## Interaction and simple interaction analysis (2 * 6)
+
+```{r message=FALSE}
+p_simpinter26 <- sim_simpinter(N_subj = 30, iter = Nsim, n_core=16, 
+                               nlevel_A = 2, nlevel_B = 6,
+                               file_cache = here::here("simulation", "p_simpinter26.rds"),
+                               seed = 2022)
+```
+
+
+```{r}
+sig_simpinter(p_simpinter26, 0.05) %>% 
+  group_by(adjust, alpha) %>% 
+  summarize(mean(sig_simpinter),
+            mean(sig_inter),
+            mean(sig_any_simpinter),
+            mean(`sig_inter&any`),
+            .groups = "drop")
+```
+
+```{r}
+# Type I error rates in different situations
+df_TypeI_simpinter26 <- sig_simpinter(p_simpinter26, 0.05) %>% 
+  group_by(alpha, adjust) %>% 
+  summarize(TypeI_inter = mean(sig_inter),
+            TypeI_siminteronly = mean(sig_any_simpinter),
+            `TypeI_inter&any` = mean(`sig_inter&any`), 
+            .groups = "drop")
+
+df_TypeI_simpinter26
+```
+
+Claim significant results only when both the main effect and at least one of the post-hoc tests (with different multiple comparison corrections) are significant:
+
+```{r fig.width=8, fig.asp=0.7}
+df_simpinter_tmp26 <- df_TypeI_simpinter26 %>% 
+  pivot_longer(starts_with("TypeI_"), names_to = "effects", values_to = "TypeI") %>% 
+  mutate(adjust = if_else(effects == "TypeI_inter", "uncorrected", 
+                          if_else(adjust == "uncorrected", "uncorrected", 
+                                  str_to_title(as.character(adjust)))),
+         adjust = fct_reorder(adjust, TypeI, mean, .desc=TRUE),
+         adjust = fct_relevel(adjust, "uncorrected"),
+         effects = factor(effects, 
+                          levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
+         effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
+                              `Simple interaction analysis\n(15 tests, FWER)`="TypeI_siminteronly", 
+                              `Interaction & simple interaction analysis\nwith 15 tests (CER)`="TypeI_inter&any")) %>% 
+  distinct() 
+
+fig_simu_simpinter26 <- df_simpinter_tmp26 %>% 
+  ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+  geom_col(width=1) +   
+  facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
+  ggh4x::facetted_pos_scales(
+    list(
+      scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65))
+    )) + 
+  scale_fill_manual(values = custom_clr[c(1,3:6)],
+                    breaks = levels(df_simpinter_tmp26$adjust)) + #,  
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 54), expand = c(0, 0)) +
+  labs(x = expression("2 " %*% " 6 ANOVAs"), y = "Type I error rate (%)", fill = "") +
+  theme(legend.position = c(0.74, 0.63),
+        axis.ticks.length = unit(.15, "cm"),
+        axis.text.x = element_blank(),
+        panel.spacing.x = unit(0, "pt"),
+        strip.placement = "outside",
+        axis.title.x = element_text(margin = margin(t = 0)))
+  
+# ggsave(file.path("figures","fig_simu_TypeI_simpinter26.png"), fig_simu_simpinter26, width = 8, height = 5.6)
+fig_simu_simpinter26
+```
+
+
+## Interaction and simple interaction analysis (3 * 4)
+
+```{r message=FALSE}
+p_simpinter34 <- sim_simpinter(N_subj = 30, iter = Nsim, n_core=16, 
+                               nlevel_A = 3, nlevel_B = 4,
+                               file_cache = here::here("simulation", "p_simpinter34.rds"),
+                               seed = 2022)
+```
+
+
+```{r}
+sig_simpinter(p_simpinter34, 0.05) %>% 
+  group_by(adjust, alpha) %>% 
+  summarize(mean(sig_simpinter),
+            mean(sig_inter),
+            mean(sig_any_simpinter),
+            mean(`sig_inter&any`),
+            .groups = "drop")
+```
+
+```{r}
+# Type I error rates in different situations
+df_TypeI_simpinter34 <- sig_simpinter(p_simpinter34, 0.05) %>% 
+  group_by(alpha, adjust) %>% 
+  summarize(TypeI_inter = mean(sig_inter),
+            TypeI_siminteronly = mean(sig_any_simpinter),
+            `TypeI_inter&any` = mean(`sig_inter&any`), 
+            .groups = "drop")
+
+df_TypeI_simpinter34
+```
+
+Claim significant results only when both the main effect and at least one of the post-hoc tests (with different multiple comparison corrections) are significant:
+
+```{r fig.width=8, fig.asp=0.7}
+df_simpinter_tmp34 <- df_TypeI_simpinter34 %>% 
+  pivot_longer(starts_with("TypeI_"), names_to = "effects", values_to = "TypeI") %>% 
+  mutate(adjust = if_else(effects == "TypeI_inter", "uncorrected", 
+                          if_else(adjust == "uncorrected", "uncorrected", 
+                                  str_to_title(as.character(adjust)))),
+         adjust = fct_reorder(adjust, TypeI, mean, .desc=TRUE),
+         adjust = fct_relevel(adjust, "uncorrected"),
+         effects = factor(effects, 
+                          levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
+         effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
+                              `Simple interaction analysis\n(18 tests, FWER)`="TypeI_siminteronly", 
+                              `Interaction & simple interaction analysis\nwith 18 tests (CER)`="TypeI_inter&any")) %>% 
+  distinct() 
+
+fig_simu_simpinter34 <- df_simpinter_tmp34 %>% 
+  ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+  geom_col(width=1) +   
+  facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
+  ggh4x::facetted_pos_scales(
+    list(
+      scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65)),
+      scale_x_continuous(breaks = 3.5, expand = c(0, 0.65))
+    )) + 
+  scale_fill_manual(values = custom_clr[c(1,3:6)],
+                    breaks = levels(df_simpinter_tmp34$adjust)) + #,  
+  geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+  scale_y_continuous(limits = c(0, 54), expand = c(0, 0)) +
+  labs(x = expression("3 " %*% " 4 ANOVAs"), y = "Type I error rate (%)", fill = "") +
+  theme(legend.position = c(0.74, 0.63),
+        axis.ticks.length = unit(.15, "cm"),
+        axis.text.x = element_blank(),
+        panel.spacing.x = unit(0, "pt"),
+        strip.placement = "outside",
+        axis.title.x = element_text(margin = margin(t = 0)))
+  
+# ggsave(file.path("figures","fig_simu_TypeI_simpinter34.png"), fig_simu_simpinter34, width = 8, height = 5.6)
+fig_simu_simpinter34
 ```
 
 
