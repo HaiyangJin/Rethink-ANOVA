@@ -415,7 +415,7 @@ sig_inter_simple <- function(df_simu_p, alphas=0.05) {
 # Interaction and simple interaction analysis #####
 # Simulation for Type I error in interaction and simple effect analysis
 sim_simpinter <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
-                             seed = 2022,
+                             seed = 2022, nlevel_A = 2, nlevel_B = 3,
                              adjusts = c("none", "scheffe", "sidak", "bonferroni", "dunnettx")
 ) {
   # N_subj: number of participants per condition (between-subject design)
@@ -431,12 +431,12 @@ sim_simpinter <- function(N_subj = 30, iter = 100, n_core=2, file_cache = NULL,
   # apply a 2*3 (between-subject ) design
   set.seed(seed)
   
+  levels_A <- paste0("a", 1:nlevel_A) 
+  levels_B <- paste0("b", 1:nlevel_B)
+  
   simu_simpinter_single <- function(N_subj, adjusts){
     
     N_adjust <- length(adjusts)
-    
-    levels_A <- c("a1", "a2")
-    levels_B <- c("b1", "b2", "b3")
     
     df_null <- tibble(
       Subj = 1:(N_subj*length(levels_A)*length(levels_B)), 

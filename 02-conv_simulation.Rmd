@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   width = 1800,
   emmeans=list(msg.interaction=FALSE))
 
-source(here::here("R", "funcs.R"))
+source(here::here("R", "funcs_simu.R"))
 set.seed(2022)
 ```
 
@@ -359,27 +359,30 @@ for (i in unique(df_posthoc_tmp$N_level)) {
   
   assign(
     nam, df_posthoc_tmp %>% 
-    filter(N_level == i) %>% 
-    ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
-    geom_col(width=1) +   
-    facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
-    ggh4x::facetted_pos_scales(
-      list(
-        scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
-        scale_x_continuous(breaks = 3.5, expand = c(0, 0.65)),
-        scale_x_continuous(breaks = 3.5, expand = c(0, 0.65))
-      )) + 
-    scale_fill_manual(values = custom_clr,
-                      breaks = levels(df_posthoc_tmp$adjust)) + #,  
-    geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
-    scale_y_continuous(limits = c(0, 45), expand = c(0, 0)) +
-    labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "Type I error rate (%)", fill = "") +
-    theme(legend.position = c(0.75, 0.6),
-          axis.ticks.length = unit(.15, "cm"),
-          axis.text.x = element_blank(),
-          panel.spacing.x = unit(0, "pt"),
-          strip.placement = "outside",
-          axis.title.x = element_text(margin = margin(t = 0)))
+      mutate(effects = fct_recode(effects, 
+                                  `Pairwise comparisons\n(FWER)`="Pairwise comparisons\n(six tests, FWER)", 
+                                  `Main effect & Pairwise\ncomparisons (CER)`="Main effect & Pairwise comparisons\nwith six tests (CER)")) %>% 
+      filter(N_level == i) %>% 
+      ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
+      geom_col(width=1) +   
+      facet_grid(cols=vars(effects), scales="free_x", space="free_x", switch="x")+
+      ggh4x::facetted_pos_scales(
+        list(
+          scale_x_continuous(breaks = 1, expand = c(0, 0.65)),
+          scale_x_continuous(breaks = 3.5, expand = c(0, 0.65)),
+          scale_x_continuous(breaks = 3.5, expand = c(0, 0.65))
+        )) + 
+      scale_fill_manual(values = custom_clr,
+                        breaks = levels(df_posthoc_tmp$adjust)) + #,  
+      geom_hline(yintercept = 5, linetype= "dashed", color="gray25") +
+      scale_y_continuous(limits = c(0, 45), expand = c(0, 0)) +
+      labs(x = paste0("One-way ANOVAs with ", i, " levels"), y = "Type I error rate (%)", fill = "") +
+      theme(legend.position = c(0.75, 0.6),
+            axis.ticks.length = unit(.15, "cm"),
+            axis.text.x = element_blank(),
+            panel.spacing.x = unit(0, "pt"),
+            strip.placement = "outside",
+            axis.title.x = element_text(margin = margin(t = 0)))
   )
   
 }

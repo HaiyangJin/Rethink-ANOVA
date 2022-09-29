@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   width = 1800,
   emmeans=list(msg.interaction=FALSE))
 
-source(here::here("R", "funcs.R"))
+source(here::here("R", "funcs_simu.R"))
 set.seed(2022)
 ```
 
