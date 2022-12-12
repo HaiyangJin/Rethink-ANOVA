@@ -54,7 +54,7 @@ p_omni <- sim_omnibus(N_subj = 30, iter = Nsim, n_core=16,
                       N_IV = 2:5)
 ```
 
-#### FWER and CER
+#### FWER and CBER
 
 ```{r}
 # Type I error rates in different situations
@@ -80,7 +80,7 @@ df_omni_cber <- df_TypeI_omni %>%
                            levels = c("TypeI_omniF", "TypeI_any", "TypeI_omniF&any")),
          effnames = fct_recode(effnames, `omnibus\nF-test` = "TypeI_omniF", 
                               `Inspect all\n(FWER)`= "TypeI_any", 
-                              `omnibus & all\n(CER)`="TypeI_omniF&any")) %>% 
+                              `omnibus & all\n(CBER)`="TypeI_omniF&any")) %>% 
   distinct() 
 
 fig_simu_a <- df_omni_cber %>% 
@@ -268,7 +268,7 @@ p_main_posthoc <- sim_main_posthoc(N_subj = 30, iter = Nsim, n_core=16,
                                    N_levels = c(3,4,5,6)) 
 ```
 
-#### FWER and CER
+#### FWER and CBER
 ```{r}
 df_TypeI_posthoc <- sig_main_posthoc(p_main_posthoc, 0.05) %>% 
   group_by(N_level, alpha, adjust) %>% 
@@ -319,7 +319,7 @@ df_posthoc_tmp <- df_TypeI_posthoc %>%
                           levels = c("TypeI_main", "TypeI_postonly", "TypeI_main&posthoc")),
          effects = fct_recode(effects, `Main effect\n` ="TypeI_main", 
                               `Pairwise comparisons\n(six tests, FWER)`="TypeI_postonly", 
-                              `Main effect & Pairwise comparisons\nwith six tests (CER)`="TypeI_main&posthoc")) %>% 
+                              `Main effect & Pairwise comparisons\nwith six tests (CBER)`="TypeI_main&posthoc")) %>% 
   distinct() 
 
 fig_simu_b <- df_posthoc_tmp %>% 
@@ -361,7 +361,7 @@ for (i in unique(df_posthoc_tmp$N_level)) {
     nam, df_posthoc_tmp %>% 
       mutate(effects = fct_recode(effects, 
                                   `Pairwise comparisons\n(FWER)`="Pairwise comparisons\n(six tests, FWER)", 
-                                  `Main effect & Pairwise\ncomparisons (CER)`="Main effect & Pairwise comparisons\nwith six tests (CER)")) %>% 
+                                  `Main effect & Pairwise\ncomparisons (CBER)`="Main effect & Pairwise comparisons\nwith six tests (CBER)")) %>% 
       filter(N_level == i) %>% 
       ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
       geom_col(width=1) +   
@@ -518,7 +518,7 @@ p_inter_simple <- sim_inter_simple(N_subj = 30, iter = Nsim, n_core=16,
                                    file_cache = here::here("simulation", "p_inter_simple.rds"))
 ```
 
-#### FWER and CER
+#### FWER and CBER
 
 Type I error rates for main effects and interaction (when different correction methods were applied to the simple effect analysis):
 ```{r}
@@ -577,8 +577,8 @@ df_inter_simp_tmp <- df_TypeI_inter %>%
       effects, 
       `Simple effect analysis\n(two tests, FWER)`= "TypeI_any_simple_byA_2", 
       `Simple effect analysis\n(four tests, FWER)`="TypeI_any_simple_byAB_4",
-      `Interaction & simple effects\nwith two tests (CER)`="TypeI_inter&any_byA_2",
-      `Interaction & simple effects\nwith four tests (CER)`= "TypeI_inter&any_byAB_4"))
+      `Interaction & simple effects\nwith two tests (CBER)`="TypeI_inter&any_byA_2",
+      `Interaction & simple effects\nwith four tests (CBER)`= "TypeI_inter&any_byAB_4"))
 
 fig_simu_c <- df_inter_simp_tmp %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
@@ -628,8 +628,8 @@ df_inter_simp_tmp_supp <- df_TypeI_inter %>%
       effects, 
       `Simple effect analysis\n(two tests, FWER)`= "TypeI_any_simple_byB_2", 
       `Simple effect analysis\n(four tests, FWER)`="TypeI_any_simple_byAB_4",
-      `Interaction & simple effects\nwith two tests (CER)`="TypeI_inter&any_byB_2",
-      `Interaction & simple effects\nwith four tests (CER)`= "TypeI_inter&any_byAB_4"))
+      `Interaction & simple effects\nwith two tests (CBER)`="TypeI_inter&any_byB_2",
+      `Interaction & simple effects\nwith four tests (CBER)`= "TypeI_inter&any_byAB_4"))
 
 fig_simu_c_supp <- df_inter_simp_tmp_supp %>% 
   ggplot(aes(x=as.numeric(adjust), y = TypeI*100, fill=adjust)) + 
@@ -768,8 +768,8 @@ fig_simu_single
 
 ```{r fig.width=13, fig.asp=0.4}
 fig_simu_a_supp
-ggsave(file.path("figures","sfig_simu_TypeI_omni.png"), 
-       fig_simu_a_supp, width = 14, height = 5.6)
+# ggsave(file.path("figures","sfig_simu_TypeI_omni.png"), 
+#        fig_simu_a_supp, width = 14, height = 5.6)
 ```
 
 

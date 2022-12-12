@@ -82,7 +82,7 @@ df_simpinter_tmp <- df_TypeI_simpinter %>%
                           levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
          effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
                               `Simple interaction analysis\n(three tests, FWER)`="TypeI_siminteronly", 
-                              `Interaction & simple interaction analysis\nwith three tests (CER)`="TypeI_inter&any")) %>% 
+                              `Interaction & simple interaction analysis\nwith three tests (CBER)`="TypeI_inter&any")) %>% 
   distinct() 
 
 fig_simu_simpinter <- df_simpinter_tmp %>% 
@@ -158,7 +158,7 @@ df_simpinter_tmp26 <- df_TypeI_simpinter26 %>%
                           levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
          effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
                               `Simple interaction analysis\n(15 tests, FWER)`="TypeI_siminteronly", 
-                              `Interaction & simple interaction analysis\nwith 15 tests (CER)`="TypeI_inter&any")) %>% 
+                              `Interaction & simple interaction analysis\nwith 15 tests (CBER)`="TypeI_inter&any")) %>% 
   distinct() 
 
 fig_simu_simpinter26 <- df_simpinter_tmp26 %>% 
@@ -234,7 +234,7 @@ df_simpinter_tmp34 <- df_TypeI_simpinter34 %>%
                           levels = c("TypeI_inter", "TypeI_siminteronly", "TypeI_inter&any")),
          effects = fct_recode(effects, `Interaction\n` ="TypeI_inter", 
                               `Simple interaction analysis\n(18 tests, FWER)`="TypeI_siminteronly", 
-                              `Interaction & simple interaction analysis\nwith 18 tests (CER)`="TypeI_inter&any")) %>% 
+                              `Interaction & simple interaction analysis\nwith 18 tests (CBER)`="TypeI_inter&any")) %>% 
   distinct() 
 
 fig_simu_simpinter34 <- df_simpinter_tmp34 %>% 
